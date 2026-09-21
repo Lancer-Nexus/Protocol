@@ -22,6 +22,11 @@ Maintain stable, explicit and interoperable contracts for the cluster.
 - Define timeout, retry, replay and error semantics for every state-changing operation.
 - Keep protocol models free of service-specific database or UI dependencies.
 
+## Working-model escalation
+
+- If a task requires complex reasoning beyond the current model's reliable scope, ask the user whether switching to a stronger model is desired before continuing.
+- Do not switch models silently or broaden the task because a stronger model may be useful.
+
 ## Verification
 
 Maintain golden-message tests, compatibility tests for the previous protocol version and negative tests for malformed or replayed messages.
