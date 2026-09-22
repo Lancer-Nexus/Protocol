@@ -115,6 +115,24 @@ public sealed class ProtocolContractTests
         Assert.Equal("unsupported_protocol_version", unsupported.ReasonCode);
     }
 
+    [Fact]
+    public void HandshakeResponse_RoundTripsWithExplicitFields()
+    {
+        var response = new ClusterHandshakeResponse
+        {
+            Accepted = true,
+            ReasonCode = "accepted",
+            NegotiatedCapabilities = ["cluster_handshake_v1"]
+        };
+
+        var copy = MessagePackSerializer.Deserialize<ClusterHandshakeResponse>(
+            MessagePackSerializer.Serialize(response));
+
+        Assert.True(copy.Accepted);
+        Assert.Equal("accepted", copy.ReasonCode);
+        Assert.Equal(["cluster_handshake_v1"], copy.NegotiatedCapabilities);
+    }
+
     private static ClusterHello Hello(string nodeId, string[] capabilities, string[]? ownedSystems = null) => new()
     {
         NodeId = nodeId,

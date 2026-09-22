@@ -14,6 +14,14 @@ public sealed class ClusterHello
 }
 
 [MessagePackObject]
+public sealed class ClusterHandshakeResponse
+{
+    [Key(0)] public bool Accepted { get; init; }
+    [Key(1)] public string ReasonCode { get; init; } = "";
+    [Key(2)] public string[] NegotiatedCapabilities { get; init; } = [];
+}
+
+[MessagePackObject]
 public sealed class AgentHeartbeat
 {
     [Key(0)] public string AgentId { get; init; } = "";
