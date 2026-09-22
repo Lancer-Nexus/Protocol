@@ -53,4 +53,28 @@ public sealed class ProtocolContractTests
         Assert.True(TransferState.TargetAccepted < TransferState.Committed);
         Assert.True(TransferState.Committed < TransferState.SourceReleased);
     }
+
+    [Fact]
+    public void HeartbeatContracts_RoundTripWithStableFields()
+    {
+        var heartbeat = new InstanceHeartbeat
+        {
+            AgentId = "agent-01",
+            InstanceId = "liberty-01",
+            SystemId = "li01",
+            Sequence = 42,
+            IsReady = true,
+            MaxPlayers = 100,
+            Endpoint = "quic://10.0.0.1:7443",
+            Capabilities = ["cluster_transfer_v1"]
+        };
+
+        var copy = MessagePackSerializer.Deserialize<InstanceHeartbeat>(
+            MessagePackSerializer.Serialize(heartbeat));
+
+        Assert.Equal(heartbeat.AgentId, copy.AgentId);
+        Assert.Equal(heartbeat.InstanceId, copy.InstanceId);
+        Assert.Equal(heartbeat.Sequence, copy.Sequence);
+        Assert.Equal(heartbeat.Endpoint, copy.Endpoint);
+    }
 }

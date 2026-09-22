@@ -14,6 +14,32 @@ public sealed class ClusterHello
 }
 
 [MessagePackObject]
+public sealed class AgentHeartbeat
+{
+    [Key(0)] public string AgentId { get; init; } = "";
+    [Key(1)] public string NodeId { get; init; } = "";
+    [Key(2)] public string BuildVersion { get; init; } = "";
+    [Key(3)] public ushort ProtocolVersion { get; init; } = ProtocolConstants.ProtocolVersion;
+    [Key(4)] public string[] Capabilities { get; init; } = [];
+    [Key(5)] public ulong Sequence { get; init; }
+}
+
+[MessagePackObject]
+public sealed class InstanceHeartbeat
+{
+    [Key(0)] public string AgentId { get; init; } = "";
+    [Key(1)] public string InstanceId { get; init; } = "";
+    [Key(2)] public string SystemId { get; init; } = "";
+    [Key(3)] public ulong Sequence { get; init; }
+    [Key(4)] public bool IsReady { get; init; }
+    [Key(5)] public bool IsDraining { get; init; }
+    [Key(6)] public int CurrentPlayers { get; init; }
+    [Key(7)] public int MaxPlayers { get; init; }
+    [Key(8)] public string Endpoint { get; init; } = "";
+    [Key(9)] public string[] Capabilities { get; init; } = [];
+}
+
+[MessagePackObject]
 public sealed class PlacementRequest
 {
     [Key(0)] public Guid RequestId { get; init; }

@@ -16,7 +16,9 @@ public enum ClusterMessageType : ushort
     TransferPrepared = 101,
     TransferCommit = 102,
     TransferAbort = 103,
-    TransferComplete = 104
+    TransferComplete = 104,
+    AgentHeartbeat = 200,
+    InstanceHeartbeat = 201
 }
 
 [Flags]
