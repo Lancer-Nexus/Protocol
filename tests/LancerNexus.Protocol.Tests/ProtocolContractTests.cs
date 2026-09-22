@@ -77,4 +77,50 @@ public sealed class ProtocolContractTests
         Assert.Equal(heartbeat.Sequence, copy.Sequence);
         Assert.Equal(heartbeat.Endpoint, copy.Endpoint);
     }
+
+    [Fact]
+    public void HandshakeNegotiatesCommonCapabilitiesDeterministically()
+    {
+        var local = Hello("local", ["transfer_v1", "heartbeat_v1", "placement_v1"]);
+        var peer = Hello("peer", ["placement_v1", "transfer_v1"], ["li02", "li01"]);
+
+        var result = ClusterHandshakeNegotiator.Negotiate(local, peer, ["transfer_v1"]);
+
+        Assert.True(result.Accepted);
+        Assert.Equal("accepted", result.ReasonCode);
+        Assert.Equal(["placement_v1", "transfer_v1"], result.NegotiatedCapabilities);
+        Assert.Equal(["li01", "li02"], result.PeerOwnedSystems);
+    }
+
+    [Fact]
+    public void HandshakeRejectsUnsupportedVersionAndMissingRequiredCapability()
+    {
+        var local = Hello("local", ["heartbeat_v1"]);
+        var peer = Hello("peer", ["heartbeat_v1"]);
+
+        var missing = ClusterHandshakeNegotiator.Negotiate(local, peer, ["transfer_v1"]);
+        var unsupported = ClusterHandshakeNegotiator.Negotiate(
+            local,
+            new ClusterHello
+            {
+                NodeId = "peer",
+                InstanceId = "peer-instance",
+                BuildVersion = "test",
+                ProtocolVersion = 2
+            });
+
+        Assert.False(missing.Accepted);
+        Assert.Equal("missing_required_capability", missing.ReasonCode);
+        Assert.False(unsupported.Accepted);
+        Assert.Equal("unsupported_protocol_version", unsupported.ReasonCode);
+    }
+
+    private static ClusterHello Hello(string nodeId, string[] capabilities, string[]? ownedSystems = null) => new()
+    {
+        NodeId = nodeId,
+        InstanceId = $"{nodeId}-instance",
+        BuildVersion = "test",
+        Capabilities = capabilities,
+        OwnedSystems = ownedSystems ?? []
+    };
 }
