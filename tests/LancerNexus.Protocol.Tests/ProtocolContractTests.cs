@@ -93,7 +93,25 @@ public sealed class ProtocolContractTests
 
         Assert.True(copy.Accepted);
         Assert.Equal("accepted", copy.ReasonCode);
-        Assert.Equal(17, copy.Sequence);
+        Assert.Equal(17UL, copy.Sequence);
+    }
+
+    [Fact]
+    public void InstanceHeartbeatResponse_RoundTripsWithStableFields()
+    {
+        var response = new InstanceHeartbeatResponse
+        {
+            Accepted = false,
+            ReasonCode = "agent_certificate_mismatch",
+            Sequence = 23
+        };
+
+        var copy = MessagePackSerializer.Deserialize<InstanceHeartbeatResponse>(
+            MessagePackSerializer.Serialize(response));
+
+        Assert.False(copy.Accepted);
+        Assert.Equal("agent_certificate_mismatch", copy.ReasonCode);
+        Assert.Equal(23UL, copy.Sequence);
     }
 
     [Fact]

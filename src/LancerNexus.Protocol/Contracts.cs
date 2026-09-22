@@ -56,6 +56,14 @@ public sealed class InstanceHeartbeat
 }
 
 [MessagePackObject]
+public sealed class InstanceHeartbeatResponse
+{
+    [Key(0)] public bool Accepted { get; init; }
+    [Key(1)] public string ReasonCode { get; init; } = "";
+    [Key(2)] public ulong Sequence { get; init; }
+}
+
+[MessagePackObject]
 public sealed class PlacementRequest
 {
     [Key(0)] public Guid RequestId { get; init; }
