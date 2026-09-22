@@ -33,6 +33,14 @@ public sealed class AgentHeartbeat
 }
 
 [MessagePackObject]
+public sealed class AgentHeartbeatResponse
+{
+    [Key(0)] public bool Accepted { get; init; }
+    [Key(1)] public string ReasonCode { get; init; } = "";
+    [Key(2)] public ulong Sequence { get; init; }
+}
+
+[MessagePackObject]
 public sealed class InstanceHeartbeat
 {
     [Key(0)] public string AgentId { get; init; } = "";

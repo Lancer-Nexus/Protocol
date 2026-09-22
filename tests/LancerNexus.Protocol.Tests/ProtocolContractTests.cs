@@ -79,6 +79,24 @@ public sealed class ProtocolContractTests
     }
 
     [Fact]
+    public void AgentHeartbeatResponse_RoundTripsWithStableFields()
+    {
+        var response = new AgentHeartbeatResponse
+        {
+            Accepted = true,
+            ReasonCode = "accepted",
+            Sequence = 17
+        };
+
+        var copy = MessagePackSerializer.Deserialize<AgentHeartbeatResponse>(
+            MessagePackSerializer.Serialize(response));
+
+        Assert.True(copy.Accepted);
+        Assert.Equal("accepted", copy.ReasonCode);
+        Assert.Equal(17, copy.Sequence);
+    }
+
+    [Fact]
     public void HandshakeNegotiatesCommonCapabilitiesDeterministically()
     {
         var local = Hello("local", ["transfer_v1", "heartbeat_v1", "placement_v1"]);
