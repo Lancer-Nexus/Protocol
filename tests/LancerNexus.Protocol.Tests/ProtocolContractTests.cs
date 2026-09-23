@@ -115,6 +115,52 @@ public sealed class ProtocolContractTests
     }
 
     [Fact]
+    public void SessionTokenClaims_RoundTripAndValidate()
+    {
+        var now = DateTime.UtcNow;
+        var claims = new SessionTokenClaims
+        {
+            SessionId = Guid.NewGuid(),
+            AccountId = Guid.NewGuid(),
+            Audience = "game-server",
+            IssuedAtUtc = now.AddMinutes(-1),
+            ExpiresAtUtc = now.AddMinutes(9),
+            Nonce = "nonce-01",
+            InstanceId = "liberty-01",
+            KeyId = "gateway-key-01"
+        };
+
+        var copy = MessagePackSerializer.Deserialize<SessionTokenClaims>(
+            MessagePackSerializer.Serialize(claims));
+
+        SessionTokenClaimsValidator.Validate(copy, now, "game-server", TimeSpan.FromSeconds(5));
+        Assert.Equal(claims.SessionId, copy.SessionId);
+        Assert.Equal(claims.AccountId, copy.AccountId);
+        Assert.Equal(claims.InstanceId, copy.InstanceId);
+    }
+
+    [Fact]
+    public void SessionTokenClaims_RejectWrongAudienceAndExpiredToken()
+    {
+        var now = DateTime.UtcNow;
+        var claims = new SessionTokenClaims
+        {
+            SessionId = Guid.NewGuid(),
+            AccountId = Guid.NewGuid(),
+            Audience = "game-server",
+            IssuedAtUtc = now.AddMinutes(-10),
+            ExpiresAtUtc = now.AddMinutes(-1),
+            Nonce = "nonce-01",
+            KeyId = "gateway-key-01"
+        };
+
+        Assert.Throws<ProtocolViolationException>(() =>
+            SessionTokenClaimsValidator.Validate(claims, now, "coordinator", TimeSpan.Zero));
+        Assert.Throws<ProtocolViolationException>(() =>
+            SessionTokenClaimsValidator.Validate(claims, now, "game-server", TimeSpan.Zero));
+    }
+
+    [Fact]
     public void HandshakeNegotiatesCommonCapabilitiesDeterministically()
     {
         var local = Hello("local", ["transfer_v1", "heartbeat_v1", "placement_v1"]);
