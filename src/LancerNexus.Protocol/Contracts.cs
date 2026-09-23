@@ -87,6 +87,7 @@ public sealed class PlacementDecision
     [Key(4)] public string? Endpoint { get; init; }
     [Key(5)] public string ReasonCode { get; init; } = "";
     [Key(6)] public DateTime ExpiresUtc { get; init; }
+    [Key(7)] public string? JoinTicket { get; init; }
 }
 
 [MessagePackObject]
