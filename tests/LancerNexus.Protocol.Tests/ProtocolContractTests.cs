@@ -1,11 +1,41 @@
 using LancerNexus.Protocol;
 using MessagePack;
+using System.Text.Json;
 using Xunit;
 
 namespace LancerNexus.Protocol.Tests;
 
 public sealed class ProtocolContractTests
 {
+    [Fact]
+    public void ClientVersionContracts_RoundTripWithStableKeys()
+    {
+        var hello = new ClientVersionHello
+        {
+            ClientVersion = "1.0.1", BuildId = "20260923.1", ProtocolVersion = 1,
+            DataManifestId = "data-2026-09-22", Platform = "linux-x64",
+            Channel = "stable", Capabilities = ["transfer-v1"]
+        };
+        var copy = MessagePackSerializer.Deserialize<ClientVersionHello>(MessagePackSerializer.Serialize(hello));
+        Assert.Equal(hello.ClientVersion, copy.ClientVersion);
+        Assert.Equal(hello.DataManifestId, copy.DataManifestId);
+        Assert.Equal(hello.Capabilities, copy.Capabilities);
+
+        var decision = new ClientVersionDecision
+        {
+            Status = ClientVersionStatus.UpdateRequired, SessionAllowed = false,
+            ServerProtocolVersion = 1, MinimumClientVersion = "1.0.1",
+            RequiredDataManifestId = "data-2026-09-22", UpdateChannel = "stable",
+            UpdateReason = "client_version_not_supported", MessageKey = "client_update_required"
+        };
+        var roundTrip = MessagePackSerializer.Deserialize<ClientVersionDecision>(MessagePackSerializer.Serialize(decision));
+        Assert.Equal(decision.Status, roundTrip.Status);
+        Assert.False(roundTrip.SessionAllowed);
+        Assert.Equal(decision.UpdateReason, roundTrip.UpdateReason);
+        Assert.Contains("\"status\":\"update_required\"", JsonSerializer.Serialize(decision,
+            new JsonSerializerOptions(JsonSerializerDefaults.Web)));
+    }
+
     [Fact]
     public void Envelope_RoundTrips_WithExplicitFields()
     {
