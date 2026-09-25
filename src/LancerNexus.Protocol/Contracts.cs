@@ -114,6 +114,31 @@ public sealed class TransferPrepared
     [Key(4)] public string ReasonCode { get; init; } = "";
 }
 
+/// <summary>Short-lived bearer ticket claims bound to one source-to-target character transfer.</summary>
+[MessagePackObject]
+public sealed class TransferTicketClaims
+{
+    [Key(0)] public Guid TransferId { get; init; }
+    [Key(1)] public Guid SessionId { get; init; }
+    [Key(2)] public Guid AccountId { get; init; }
+    [Key(3)] public long CharacterId { get; init; }
+    [Key(4)] public string SourceInstanceId { get; init; } = "";
+    [Key(5)] public string TargetInstanceId { get; init; } = "";
+    [Key(6)] public string TargetSystemId { get; init; } = "";
+    [Key(7)] public long LeaseVersion { get; init; }
+    [Key(8)] public DateTime IssuedAtUtc { get; init; }
+    [Key(9)] public DateTime ExpiresAtUtc { get; init; }
+    [Key(10)] public string Nonce { get; init; } = "";
+    [Key(11)] public string Audience { get; init; } = "";
+    [Key(12)] public string KeyId { get; init; } = "";
+}
+
+[MessagePackObject]
+public sealed class TransferTicketVerificationRequest
+{
+    [Key(0)] public string Ticket { get; init; } = "";
+}
+
 [MessagePackObject]
 public sealed class TransferCommit
 {

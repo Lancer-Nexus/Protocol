@@ -12,9 +12,13 @@ public sealed class ProtocolContractTests
     {
         var hello = new ClientVersionHello
         {
-            ClientVersion = "1.0.1", BuildId = "20260923.1", ProtocolVersion = 1,
-            DataManifestId = "data-2026-09-22", Platform = "linux-x64",
-            Channel = "stable", Capabilities = ["transfer-v1"]
+            ClientVersion = "1.0.1",
+            BuildId = "20260923.1",
+            ProtocolVersion = 1,
+            DataManifestId = "data-2026-09-22",
+            Platform = "linux-x64",
+            Channel = "stable",
+            Capabilities = ["transfer-v1"]
         };
         var copy = MessagePackSerializer.Deserialize<ClientVersionHello>(MessagePackSerializer.Serialize(hello));
         Assert.Equal(hello.ClientVersion, copy.ClientVersion);
@@ -23,10 +27,14 @@ public sealed class ProtocolContractTests
 
         var decision = new ClientVersionDecision
         {
-            Status = ClientVersionStatus.UpdateRequired, SessionAllowed = false,
-            ServerProtocolVersion = 1, MinimumClientVersion = "1.0.1",
-            RequiredDataManifestId = "data-2026-09-22", UpdateChannel = "stable",
-            UpdateReason = "client_version_not_supported", MessageKey = "client_update_required"
+            Status = ClientVersionStatus.UpdateRequired,
+            SessionAllowed = false,
+            ServerProtocolVersion = 1,
+            MinimumClientVersion = "1.0.1",
+            RequiredDataManifestId = "data-2026-09-22",
+            UpdateChannel = "stable",
+            UpdateReason = "client_version_not_supported",
+            MessageKey = "client_update_required"
         };
         var roundTrip = MessagePackSerializer.Deserialize<ClientVersionDecision>(MessagePackSerializer.Serialize(decision));
         Assert.Equal(decision.Status, roundTrip.Status);
@@ -82,6 +90,90 @@ public sealed class ProtocolContractTests
         Assert.True(TransferState.SourceFrozen < TransferState.TargetAccepted);
         Assert.True(TransferState.TargetAccepted < TransferState.Committed);
         Assert.True(TransferState.Committed < TransferState.SourceReleased);
+    }
+
+    [Fact]
+    public void TransferContracts_RoundTripWithStableFields()
+    {
+        var transferId = Guid.NewGuid();
+        var sessionId = Guid.NewGuid();
+        var prepare = new TransferPrepareRequest
+        {
+            TransferId = transferId,
+            SessionId = sessionId,
+            CharacterId = 42,
+            SourceInstanceId = "new-york-01",
+            TargetInstanceId = "california-01",
+            TargetSystemId = "li02",
+            GroupId = "group-01",
+            ExpiresUtc = DateTime.UtcNow.AddSeconds(30),
+            IdempotencyKey = "transfer-01"
+        };
+        var prepared = new TransferPrepared
+        {
+            TransferId = transferId,
+            Accepted = true,
+            TransferTicket = "short-lived-ticket",
+            ExpiresUtc = prepare.ExpiresUtc,
+            ReasonCode = "prepared"
+        };
+        var commit = new TransferCommit
+        {
+            TransferId = transferId,
+            CharacterId = prepare.CharacterId,
+            LeaseVersion = 8,
+            Snapshot = [1, 2, 3]
+        };
+        var abort = new TransferAbort
+        {
+            TransferId = transferId,
+            ReasonCode = "target_unavailable",
+            Retryable = true
+        };
+
+        var prepareCopy = MessagePackSerializer.Deserialize<TransferPrepareRequest>(MessagePackSerializer.Serialize(prepare));
+        var preparedCopy = MessagePackSerializer.Deserialize<TransferPrepared>(MessagePackSerializer.Serialize(prepared));
+        var commitCopy = MessagePackSerializer.Deserialize<TransferCommit>(MessagePackSerializer.Serialize(commit));
+        var abortCopy = MessagePackSerializer.Deserialize<TransferAbort>(MessagePackSerializer.Serialize(abort));
+
+        Assert.Equal(prepare.TransferId, prepareCopy.TransferId);
+        Assert.Equal(prepare.TargetInstanceId, prepareCopy.TargetInstanceId);
+        Assert.Equal(prepare.IdempotencyKey, prepareCopy.IdempotencyKey);
+        Assert.Equal(prepared.TransferTicket, preparedCopy.TransferTicket);
+        Assert.Equal(prepared.ExpiresUtc, preparedCopy.ExpiresUtc);
+        Assert.Equal(commit.LeaseVersion, commitCopy.LeaseVersion);
+        Assert.Equal(commit.Snapshot, commitCopy.Snapshot);
+        Assert.Equal(abort.ReasonCode, abortCopy.ReasonCode);
+        Assert.True(abortCopy.Retryable);
+    }
+
+    [Fact]
+    public void TransferTicketClaims_RoundTripWithTargetAndLeaseBinding()
+    {
+        var claims = new TransferTicketClaims
+        {
+            TransferId = Guid.NewGuid(),
+            SessionId = Guid.NewGuid(),
+            AccountId = Guid.NewGuid(),
+            CharacterId = 73,
+            SourceInstanceId = "new-york-01",
+            TargetInstanceId = "california-01",
+            TargetSystemId = "li02",
+            LeaseVersion = 14,
+            IssuedAtUtc = DateTime.UtcNow,
+            ExpiresAtUtc = DateTime.UtcNow.AddSeconds(60),
+            Nonce = "transfer-nonce",
+            Audience = "game-server-transfer",
+            KeyId = "transfer-key-01"
+        };
+
+        var copy = MessagePackSerializer.Deserialize<TransferTicketClaims>(
+            MessagePackSerializer.Serialize(claims));
+
+        Assert.Equal(claims.TransferId, copy.TransferId);
+        Assert.Equal(claims.TargetInstanceId, copy.TargetInstanceId);
+        Assert.Equal(claims.LeaseVersion, copy.LeaseVersion);
+        Assert.Equal(claims.Audience, copy.Audience);
     }
 
     [Fact]
