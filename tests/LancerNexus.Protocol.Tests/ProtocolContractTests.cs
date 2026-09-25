@@ -177,6 +177,47 @@ public sealed class ProtocolContractTests
     }
 
     [Fact]
+    public void TransferStartContracts_RoundTripTargetAndIdempotency()
+    {
+        var request = new TransferStartRequest
+        {
+            TransferId = Guid.NewGuid(),
+            SessionId = Guid.NewGuid(),
+            CharacterId = 73,
+            TargetInstanceId = "california-01",
+            TargetSystemId = "li02",
+            ExpiresUtc = DateTime.UtcNow.AddSeconds(45),
+            IdempotencyKey = "jump-73-li02"
+        };
+        var result = new TransferStartResult
+        {
+            Prepared = new TransferPrepared
+            {
+                TransferId = request.TransferId,
+                Accepted = true,
+                TransferTicket = "signed-transfer-ticket",
+                ExpiresUtc = request.ExpiresUtc,
+                ReasonCode = "prepared"
+            },
+            SourceInstanceId = "new-york-01",
+            TargetEndpoint = "10.0.0.2:2300",
+            TargetSystemId = request.TargetSystemId,
+            LeaseVersion = 14,
+            Duplicate = false
+        };
+
+        var requestCopy = MessagePackSerializer.Deserialize<TransferStartRequest>(
+            MessagePackSerializer.Serialize(request));
+        var resultCopy = MessagePackSerializer.Deserialize<TransferStartResult>(
+            MessagePackSerializer.Serialize(result));
+
+        Assert.Equal(request.IdempotencyKey, requestCopy.IdempotencyKey);
+        Assert.Equal(request.TargetInstanceId, requestCopy.TargetInstanceId);
+        Assert.Equal(result.Prepared.TransferTicket, resultCopy.Prepared.TransferTicket);
+        Assert.Equal(result.LeaseVersion, resultCopy.LeaseVersion);
+    }
+
+    [Fact]
     public void HeartbeatContracts_RoundTripWithStableFields()
     {
         var heartbeat = new InstanceHeartbeat

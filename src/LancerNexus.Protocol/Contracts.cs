@@ -139,6 +139,31 @@ public sealed class TransferTicketVerificationRequest
     [Key(0)] public string Ticket { get; init; } = "";
 }
 
+/// <summary>Client-authenticated request to begin a transfer; source ownership is resolved by Gateway.</summary>
+[MessagePackObject]
+public sealed class TransferStartRequest
+{
+    [Key(0)] public Guid TransferId { get; init; }
+    [Key(1)] public Guid SessionId { get; init; }
+    [Key(2)] public long CharacterId { get; init; }
+    [Key(3)] public string TargetInstanceId { get; init; } = "";
+    [Key(4)] public string TargetSystemId { get; init; } = "";
+    [Key(5)] public string? GroupId { get; init; }
+    [Key(6)] public DateTime ExpiresUtc { get; init; }
+    [Key(7)] public string IdempotencyKey { get; init; } = "";
+}
+
+[MessagePackObject]
+public sealed class TransferStartResult
+{
+    [Key(0)] public TransferPrepared Prepared { get; init; } = new();
+    [Key(1)] public string? SourceInstanceId { get; init; }
+    [Key(2)] public string? TargetEndpoint { get; init; }
+    [Key(3)] public string? TargetSystemId { get; init; }
+    [Key(4)] public long LeaseVersion { get; init; }
+    [Key(5)] public bool Duplicate { get; init; }
+}
+
 [MessagePackObject]
 public sealed class TransferCommit
 {
