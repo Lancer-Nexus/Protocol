@@ -233,6 +233,22 @@ public sealed class ProtocolContractTests
     }
 
     [Fact]
+    public void TransferTargetAcceptance_RoundTripsTicketAndLeaseCredential()
+    {
+        var request = new TransferTargetAcceptanceRequest
+        {
+            Ticket = "transfer-ticket",
+            TargetLeaseToken = "short-lived-target-lease-token"
+        };
+
+        var copy = MessagePackSerializer.Deserialize<TransferTargetAcceptanceRequest>(
+            MessagePackSerializer.Serialize(request));
+
+        Assert.Equal(request.Ticket, copy.Ticket);
+        Assert.Equal(request.TargetLeaseToken, copy.TargetLeaseToken);
+    }
+
+    [Fact]
     public void HeartbeatContracts_RoundTripWithStableFields()
     {
         var heartbeat = new InstanceHeartbeat
