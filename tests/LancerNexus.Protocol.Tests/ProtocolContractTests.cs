@@ -249,6 +249,40 @@ public sealed class ProtocolContractTests
     }
 
     [Fact]
+    public void TransferSourceRelease_RoundTripsTransferIdentity()
+    {
+        var request = new TransferSourceReleaseRequest { TransferId = Guid.NewGuid() };
+
+        var copy = MessagePackSerializer.Deserialize<TransferSourceReleaseRequest>(
+            MessagePackSerializer.Serialize(request));
+
+        Assert.Equal(request.TransferId, copy.TransferId);
+    }
+
+    [Fact]
+    public void TransferStatus_RoundTripsLifecycleAndInstanceBinding()
+    {
+        var response = new TransferStatusResponse
+        {
+            TransferId = Guid.NewGuid(),
+            SourceInstanceId = "li01-instance",
+            TargetInstanceId = "li02-instance",
+            TargetSystemId = "li02",
+            State = TransferState.Committed,
+            ExpiresUtc = DateTime.UtcNow.AddMinutes(1),
+            LeaseVersion = 15
+        };
+
+        var copy = MessagePackSerializer.Deserialize<TransferStatusResponse>(
+            MessagePackSerializer.Serialize(response));
+
+        Assert.Equal(response.TransferId, copy.TransferId);
+        Assert.Equal(response.SourceInstanceId, copy.SourceInstanceId);
+        Assert.Equal(response.State, copy.State);
+        Assert.Equal(response.LeaseVersion, copy.LeaseVersion);
+    }
+
+    [Fact]
     public void HeartbeatContracts_RoundTripWithStableFields()
     {
         var heartbeat = new InstanceHeartbeat

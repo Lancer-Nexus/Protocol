@@ -148,6 +148,25 @@ public sealed class TransferTargetAcceptanceRequest
     [Key(1)] public string TargetLeaseToken { get; init; } = "";
 }
 
+/// <summary>Idempotent request from the authenticated source instance to release a committed transfer.</summary>
+[MessagePackObject]
+public sealed class TransferSourceReleaseRequest
+{
+    [Key(0)] public Guid TransferId { get; init; }
+}
+
+[MessagePackObject]
+public sealed class TransferStatusResponse
+{
+    [Key(0)] public Guid TransferId { get; init; }
+    [Key(1)] public string SourceInstanceId { get; init; } = "";
+    [Key(2)] public string TargetInstanceId { get; init; } = "";
+    [Key(3)] public string TargetSystemId { get; init; } = "";
+    [Key(4)] public TransferState State { get; init; }
+    [Key(5)] public DateTime ExpiresUtc { get; init; }
+    [Key(6)] public long LeaseVersion { get; init; }
+}
+
 /// <summary>Client-authenticated request to begin a transfer; source ownership is resolved by Gateway.</summary>
 [MessagePackObject]
 public sealed class TransferStartRequest
