@@ -218,6 +218,21 @@ public sealed class ProtocolContractTests
     }
 
     [Fact]
+    public void TransferTicketVerification_BindsActualTargetInstance()
+    {
+        var request = new TransferTicketVerificationRequest
+        {
+            Ticket = "opaque-ticket",
+            TargetInstanceId = "california-01"
+        };
+
+        var copy = MessagePackSerializer.Deserialize<TransferTicketVerificationRequest>(
+            MessagePackSerializer.Serialize(request));
+
+        Assert.Equal(request.TargetInstanceId, copy.TargetInstanceId);
+    }
+
+    [Fact]
     public void HeartbeatContracts_RoundTripWithStableFields()
     {
         var heartbeat = new InstanceHeartbeat

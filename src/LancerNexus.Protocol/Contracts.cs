@@ -137,6 +137,7 @@ public sealed class TransferTicketClaims
 public sealed class TransferTicketVerificationRequest
 {
     [Key(0)] public string Ticket { get; init; } = "";
+    [Key(1)] public string TargetInstanceId { get; init; } = "";
 }
 
 /// <summary>Client-authenticated request to begin a transfer; source ownership is resolved by Gateway.</summary>
