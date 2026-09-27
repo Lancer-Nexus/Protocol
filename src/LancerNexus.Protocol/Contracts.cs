@@ -179,6 +179,7 @@ public sealed class TransferStartRequest
     [Key(5)] public string? GroupId { get; init; }
     [Key(6)] public DateTime ExpiresUtc { get; init; }
     [Key(7)] public string IdempotencyKey { get; init; } = "";
+    [Key(8)] public Guid AccountId { get; init; }
 }
 
 [MessagePackObject]
@@ -190,6 +191,7 @@ public sealed class TransferStartResult
     [Key(3)] public string? TargetSystemId { get; init; }
     [Key(4)] public long LeaseVersion { get; init; }
     [Key(5)] public bool Duplicate { get; init; }
+    [Key(6)] public string? TargetInstanceId { get; init; }
 }
 
 [MessagePackObject]
