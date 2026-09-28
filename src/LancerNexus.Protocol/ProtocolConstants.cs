@@ -20,7 +20,9 @@ public enum ClusterMessageType : ushort
     AgentHeartbeat = 200,
     InstanceHeartbeat = 201,
     AgentHeartbeatResponse = 202,
-    InstanceHeartbeatResponse = 203
+    InstanceHeartbeatResponse = 203,
+    PermissionRevisionChanged = 300,
+    PermissionRevisionAcknowledged = 301
 }
 
 [Flags]

@@ -53,6 +53,9 @@ public sealed class InstanceHeartbeat
     [Key(7)] public int MaxPlayers { get; init; }
     [Key(8)] public string Endpoint { get; init; } = "";
     [Key(9)] public string[] Capabilities { get; init; } = [];
+    // Empty retains the legacy single-SystemId behavior.
+    private string[]? systemIds;
+    [Key(10)] public string[] SystemIds { get => systemIds ?? []; init => systemIds = value; }
 }
 
 [MessagePackObject]

@@ -8,6 +8,25 @@ namespace LancerNexus.Protocol.Tests;
 public sealed class ProtocolContractTests
 {
     [Fact]
+    public void MultiSystemHeartbeatPreservesLegacyTenFieldDecoding()
+    {
+        var value = new InstanceHeartbeat { AgentId = "agent", InstanceId = "li-01", SystemId = "li01",
+            SystemIds = ["li01", "li03"], Sequence = 1, MaxPlayers = 200, Endpoint = "127.0.0.1:26005" };
+        var bytes = MessagePackSerializer.Serialize(value);
+        var copy = MessagePackSerializer.Deserialize<InstanceHeartbeat>(bytes);
+        Assert.Equal(value.SystemIds, copy.SystemIds);
+        var reader = new MessagePackReader(bytes);
+        Assert.Equal(11, reader.ReadArrayHeader());
+        var buffer = new System.Buffers.ArrayBufferWriter<byte>();
+        var writer = new MessagePackWriter(buffer);
+        writer.WriteArrayHeader(10);
+        for (var i = 0; i < 10; i++) writer.WriteRaw(reader.ReadRaw());
+        writer.Flush();
+        var legacy = MessagePackSerializer.Deserialize<InstanceHeartbeat>(buffer.WrittenMemory);
+        Assert.Equal("li01", legacy.SystemId);
+        Assert.Empty(legacy.SystemIds);
+    }
+    [Fact]
     public void ClientVersionContracts_RoundTripWithStableKeys()
     {
         var hello = new ClientVersionHello

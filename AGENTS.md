@@ -29,4 +29,11 @@ Maintain stable, explicit and interoperable contracts for the cluster.
 
 ## Verification
 
+AdminQuery is a closed read-only wire contract with explicit MessagePack keys, correlation and account-scoped idempotency identifiers. Reject unknown kinds, malformed identifiers and extra chat arguments; never carry executable raw admin text. Admission identity is attested by Gateway and does not itself grant administrator rights. Repeated queries require current authorization and fresh status in the consuming service.
+
 Maintain golden-message tests, compatibility tests for the previous protocol version and negative tests for malformed or replayed messages.
+
+## Nexus baseline system groups
+
+The base Nexus topology uses eight game instances, one per group: BR01-BR06 (`br-01`), BW01-BW10 (`bw-01`), EW01-EW05 (`ew-01`), IW01-IW06 (`iw-01`), KU01-KU06 (`ku-01`), LI01-LI05 (`li-01`), RH01-RH05 (`rh-01`), and `mixed-01` for all remaining registered systems. System nicknames are compared case insensitively and emitted lowercase. Folder names are not always world nicknames: `fp7` contains `fp7_system`; `intro` and `miners` are asset directories, not registered worlds.
+InstanceHeartbeat adds optional SystemIds at MessagePack key 10. Old ten-field messages must decode to an empty set, preserving legacy primary-SystemId routing. Do not renumber existing keys or multiply instance capacity per reported system.

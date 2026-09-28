@@ -1,5 +1,7 @@
 # Lancer Nexus Protocol
 
+AdminContracts defines bounded read-only AdminQuery commands (help/status/instances/instance), admitted GameAdminQueryRequest, Gateway-attested AuthorizedAdminQueryRequest and private AdminQueryResponse. Explicit MessagePack keys and a closed enum prevent executable text from crossing service boundaries. Parsers reject unknown commands, extra arguments and invalid identifiers. New contracts do not renumber existing messages. Responses carry correlation and outcome; queries carry account-scoped idempotency keys. Repeated queries must use current authorization and fresh status, not cached privileges.
+
 This repository contains versioned contracts for communication between the Lancer Nexus Client, Gateway, Coordinator, Agents and game instances.
 
 ## Protocol basis
@@ -25,3 +27,9 @@ The implementation provides explicit MessagePack contracts for the envelope, cap
 `ClientVersionHello` (keys 0–6) and `ClientVersionDecision` (keys 0–9) define the pre-login version exchange. Gateway owns the compatibility policy and issues the short-lived proof; the contract itself grants no permissions. `TransferStartRequest` lets an authenticated client name the character and target, while Gateway resolves the source instance from its authoritative lease. `TransferTicketClaims` binds short-lived transfer admission to the session, character, source and target instances, target system and current lease version. `TransferTicketVerificationRequest` includes the target server's actual instance ID so Gateway can enforce the ticket's target binding. Signing, replay handling and attachment checks remain service responsibilities.
 `TransferTargetAcceptanceRequest` carries the validated transfer ticket and the target's proposed short-lived lease token after it has prepared the snapshot. The target instance identity comes from its per-instance authenticated Gateway connection, not this request body.
 `TransferStatusResponse` is visible only to the authenticated source or target instance. `TransferSourceReleaseRequest` lets the source complete `SourceReleased` only after Gateway has committed the MySQL lease and Coordinator reports `Committed`.
+
+Permission synchronization uses `PermissionRevisionChanged` and `PermissionRevisionAcknowledged` with append-only message IDs 300 and 301. Notices only invalidate local state; each instance reloads the authoritative SQL snapshot through Gateway and ACKs after activation. The ACK instance identity is derived from its authenticated connection. Never put permission snapshots, credentials or role mutations in Redis notices.
+
+For the full migration, evaluation order and current process integration status, see [Administration's permission system guide](../Administration/docs/permission-system.md).
+
+`InstanceHeartbeat.SystemIds` is optional at MessagePack key 10. Legacy ten-field messages decode with an empty list, retaining the primary `SystemId`; group-aware Coordinators use the full list without duplicating capacity.
