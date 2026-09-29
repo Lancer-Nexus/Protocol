@@ -14,6 +14,39 @@ This repository contains versioned contracts for communication between the Lance
 
 The protocol defines envelopes, authentication metadata, registration, placement, leases, transfers, chat events and health messages. It does not contain service implementations.
 
+## NPC transfer contracts
+
+The optional `npc_transfer_v1` capability identifies peers that understand the
+NPC transfer messages. A transfer request reserves one target instance for a set
+of stable NPC IDs; `FormationId` and `MissionRuntimeId` bind NPCs that must move
+together. `NpcOwnershipLease.OwnershipVersion` is the fencing token for
+authoritative simulation and persistence. Runtime snapshots are independently
+versioned (`SnapshotSchemaVersion` and `RuntimeSchemaVersion`) and travel over
+the authenticated instance-to-instance transfer channel; reject unsupported
+versions and keep the target inactive until `Committed`.
+
+`NpcRuntimeStateV1` defines the core MessagePack state shape: transform and
+velocities, health, loadout/equipment/cargo, autopilot target and elapsed time,
+AI state/timers/random state, target NPC identity and mission runtime bytes.
+Object references must be resolved by stable IDs on import. `ExtensionData`
+allows engine-specific component state to be carried without changing the
+shared contract; its contents still need a documented schema per producer.
+The player mission runtime payload uses its own schema version. Version 4
+includes active/completed triggers, condition storage, pending lines, objective
+and random state, each mission label's spawned/alive/destroyed members, and a
+data-reference descriptor for generated random missions, including the active
+offer's display fields. Peers that do not
+understand the mission payload version must reject the handoff.
+
+`NpcPeerSnapshotTransfer` carries the serialized snapshot over a length-prefixed,
+mTLS-protected QUIC peer stream. Payloads are limited to 15 MiB; the receiver
+checks source/target certificate identities against the envelope and must compare
+the snapshot with the Coordinator journal before staging it. The Client overlay
+contains GameServer identity allocation, mTLS QUIC staging, simulation freeze,
+target restore and coupled player/NPC activation. This protocol defines the
+wire contract; deployments still need matching Coordinator migrations,
+capabilities, certificates and server configuration before handoffs can run.
+
 ## Development
 
 ```bash

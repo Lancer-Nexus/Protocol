@@ -462,6 +462,283 @@ public sealed class ProtocolContractTests
         Assert.Equal(["cluster_handshake_v1"], copy.NegotiatedCapabilities);
     }
 
+    [Fact]
+    public void NpcTransferContracts_RoundTripOwnershipAndRuntimeSnapshot()
+    {
+        var transferId = Guid.NewGuid();
+        var npcId = Guid.NewGuid();
+        var formationId = Guid.NewGuid();
+        var missionId = Guid.NewGuid();
+        var prepare = new NpcTransferPrepareRequest
+        {
+            TransferId = transferId,
+            SourceInstanceId = "li-01",
+            TargetInstanceId = "rh-01",
+            TargetSystemId = "rh01",
+            NpcIds = [npcId],
+            FormationId = formationId,
+            MissionRuntimeId = missionId,
+            ExpiresUtc = DateTime.UtcNow.AddSeconds(30),
+            IdempotencyKey = "npc-hop-01"
+        };
+        var runtimeState = new NpcRuntimeStateV1
+        {
+            Position = new NpcVector3 { X = 10, Y = 20, Z = 30 },
+            Orientation = new NpcQuaternion { W = 1 },
+            LinearVelocity = new NpcVector3 { Z = -12 },
+            Health = 75,
+            LoadoutArchetype = "npc_fighter",
+            Cargo = [new NpcCargoState { ItemId = "commodity_food", Count = 4 }],
+            Autopilot = new NpcAutopilotState
+            {
+                Behavior = "formation",
+                TargetNpcId = Guid.NewGuid(),
+                BehaviorElapsedSeconds = 3.5
+            },
+            Ai = new NpcAiState
+            {
+                StateId = "evade",
+                PreviousStateId = "trail",
+                StateElapsedSeconds = 2.25,
+                Timers = [1.5, 5],
+                RandomState = 1234
+            },
+            CurrentTargetNpcId = Guid.NewGuid(),
+            MissionState = [4, 5, 6]
+        };
+        var runtimeBytes = MessagePackSerializer.Serialize(runtimeState);
+        var snapshot = new NpcTransferSnapshot
+        {
+            TransferId = transferId,
+            NpcIds = [npcId],
+            FormationId = formationId,
+            MissionRuntimeId = missionId,
+            TargetSystemId = "li02",
+            MissionRuntimeState = MessagePackSerializer.Serialize(new NpcMissionRuntimeStateV1
+            {
+                MissionNickname = "random-7e7c6f2e7a274db39e0bd3588e6ab333",
+                RandomState = 1,
+                GeneratedMission = new NpcGeneratedMissionState
+                {
+                    OfferBaseNickname = "li01_01_base",
+                    OfferFactionNickname = "li_n_grp",
+                    HostileFactionNickname = "pi_grp",
+                    DestinationSystemNickname = "li01",
+                    TargetZoneNickname = "Zone_Li01_Tradelane_1",
+                    TargetShipArchNickname = "pi_fighter",
+                    MissionType = "DestroyMission",
+                    TargetLocationIds = 12345,
+                    Reward = 2500,
+                    Difficulty = 2.5f,
+                    Seed = 42,
+                    TargetPosition = new NpcVector3 { X = 100, Y = 200, Z = -300 },
+                    Id = 81,
+                    OfferText = "Generated contract test",
+                    TargetName = "Test target"
+                }
+            }),
+            Npcs = [new NpcRuntimeSnapshot
+            {
+                NpcId = npcId,
+                OwnershipVersion = 9,
+                SystemId = "rh01",
+                RuntimeSchemaVersion = 2,
+                RuntimeState = runtimeBytes
+            }]
+        };
+        var phase = new NpcTransferPhaseRequest
+        {
+            TransferId = transferId,
+            State = NpcTransferState.SourceFrozen,
+            Snapshot = snapshot
+        };
+
+        NpcTransferContractValidator.Validate(prepare);
+        NpcTransferContractValidator.Validate(snapshot);
+
+        var invalidRandomMissionSnapshot = new NpcTransferSnapshot
+        {
+            TransferId = snapshot.TransferId,
+            NpcIds = snapshot.NpcIds,
+            MissionRuntimeId = snapshot.MissionRuntimeId,
+            TargetSystemId = snapshot.TargetSystemId,
+            Npcs = snapshot.Npcs,
+            MissionRuntimeState = MessagePackSerializer.Serialize(new NpcMissionRuntimeStateV1
+            {
+                MissionNickname = "random-missing-descriptor",
+                RandomState = 1
+            })
+        };
+        Assert.Throws<ProtocolViolationException>(() => NpcTransferContractValidator.Validate(invalidRandomMissionSnapshot));
+
+        var prepareCopy = MessagePackSerializer.Deserialize<NpcTransferPrepareRequest>(
+            MessagePackSerializer.Serialize(prepare));
+        var phaseCopy = MessagePackSerializer.Deserialize<NpcTransferPhaseRequest>(
+            MessagePackSerializer.Serialize(phase));
+        var lease = new NpcOwnershipLease
+        {
+            NpcId = npcId,
+            InstanceId = "li-01",
+            OwnershipVersion = 8,
+            ActiveTransferId = transferId
+        };
+        var leaseCopy = MessagePackSerializer.Deserialize<NpcOwnershipLease>(
+            MessagePackSerializer.Serialize(lease));
+
+        Assert.Equal(prepare.NpcIds, prepareCopy.NpcIds);
+        Assert.Equal(prepare.MissionRuntimeId, prepareCopy.MissionRuntimeId);
+        Assert.Equal(NpcTransferState.SourceFrozen, phaseCopy.State);
+        var runtimeCopy = MessagePackSerializer.Deserialize<NpcRuntimeStateV1>(
+            phaseCopy.Snapshot!.Npcs[0].RuntimeState);
+        Assert.Equal(runtimeState.Position.X, runtimeCopy.Position.X);
+        Assert.Equal(runtimeState.Cargo[0].ItemId, runtimeCopy.Cargo[0].ItemId);
+        Assert.Equal(runtimeState.Autopilot.Behavior, runtimeCopy.Autopilot.Behavior);
+        Assert.Equal(runtimeState.Ai.StateId, runtimeCopy.Ai.StateId);
+        Assert.Equal(runtimeState.Ai.RandomState, runtimeCopy.Ai.RandomState);
+        Assert.Equal(runtimeState.MissionState, runtimeCopy.MissionState);
+        var missionCopy = MessagePackSerializer.Deserialize<NpcMissionRuntimeStateV1>(
+            phaseCopy.Snapshot!.MissionRuntimeState);
+        Assert.Equal(snapshot.MissionRuntimeState, phaseCopy.Snapshot.MissionRuntimeState);
+        Assert.Equal("random-7e7c6f2e7a274db39e0bd3588e6ab333", missionCopy.MissionNickname);
+        Assert.Equal("Zone_Li01_Tradelane_1", missionCopy.GeneratedMission!.TargetZoneNickname);
+        Assert.Equal(42, missionCopy.GeneratedMission.Seed);
+        Assert.Equal(81, missionCopy.GeneratedMission.Id);
+        Assert.Equal("Generated contract test", missionCopy.GeneratedMission.OfferText);
+        Assert.Equal(lease.OwnershipVersion, leaseCopy.OwnershipVersion);
+        Assert.Equal("npc_transfer_v1", ClusterCapabilities.NpcTransferV1);
+    }
+
+    [Fact]
+    public void NpcTransferContractValidator_RejectsDuplicateIdsAndInvalidRuntimeNumbers()
+    {
+        var npcId = Guid.NewGuid();
+        var request = new NpcTransferPrepareRequest
+        {
+            TransferId = Guid.NewGuid(),
+            SourceInstanceId = "li-01",
+            TargetInstanceId = "rh-01",
+            TargetSystemId = "rh01",
+            NpcIds = [npcId, npcId],
+            ExpiresUtc = DateTime.UtcNow.AddSeconds(30),
+            IdempotencyKey = "duplicate-npc"
+        };
+        Assert.Throws<ProtocolViolationException>(() => NpcTransferContractValidator.Validate(request));
+
+        var invalidState = new NpcRuntimeStateV1
+        {
+            Position = new NpcVector3 { X = float.NaN },
+            LoadoutArchetype = "npc_fighter",
+            Ai = new NpcAiState { StateId = "idle", PreviousStateId = "idle" }
+        };
+        var snapshot = new NpcTransferSnapshot
+        {
+            TransferId = Guid.NewGuid(),
+            NpcIds = [npcId],
+            TargetSystemId = "rh01",
+            Npcs = [new NpcRuntimeSnapshot
+            {
+                NpcId = npcId,
+                OwnershipVersion = 1,
+                SystemId = "rh01",
+                RuntimeState = MessagePackSerializer.Serialize(invalidState)
+            }]
+        };
+        Assert.Throws<ProtocolViolationException>(() => NpcTransferContractValidator.Validate(snapshot));
+    }
+
+    [Fact]
+    public void NpcTransferCapability_IsRejectedWhenPeerDoesNotAdvertiseIt()
+    {
+        var local = Hello("local", [ClusterCapabilities.NpcTransferV1]);
+        var peer = Hello("peer", ["heartbeat_v1"]);
+
+        var result = ClusterHandshakeNegotiator.Negotiate(
+            local, peer, [ClusterCapabilities.NpcTransferV1]);
+
+        Assert.False(result.Accepted);
+        Assert.Equal("missing_required_capability", result.ReasonCode);
+    }
+
+    [Fact]
+    public void NpcOwnershipRegistrationContract_RoundTripsIdempotencyAndIdentity()
+    {
+        var request = new NpcOwnershipRegistrationRequest
+        {
+            NpcId = Guid.NewGuid(),
+            InstanceId = "li-01",
+            SystemId = "li01",
+            IdempotencyKey = "spawn-42"
+        };
+        var copy = MessagePackSerializer.Deserialize<NpcOwnershipRegistrationRequest>(
+            MessagePackSerializer.Serialize(request));
+        Assert.Equal(request.NpcId, copy.NpcId);
+        Assert.Equal(request.InstanceId, copy.InstanceId);
+        Assert.Equal(request.SystemId, copy.SystemId);
+        Assert.Equal(request.IdempotencyKey, copy.IdempotencyKey);
+        NpcTransferContractValidator.Validate(request);
+        Assert.Throws<ProtocolViolationException>(() => NpcTransferContractValidator.Validate(
+            new NpcOwnershipRegistrationRequest { NpcId = Guid.Empty }));
+    }
+
+    [Fact]
+    public void NpcIdBatchAllocation_RoundTripsCoordinatorIssuedLeases()
+    {
+        var request = new NpcIdBatchAllocationRequest
+        {
+            RequestId = Guid.NewGuid(),
+            InstanceId = "li-01",
+            SystemId = "li01",
+            Count = 128
+        };
+        var requestCopy = MessagePackSerializer.Deserialize<NpcIdBatchAllocationRequest>(
+            MessagePackSerializer.Serialize(request));
+        NpcTransferContractValidator.Validate(requestCopy);
+        Assert.Equal(request.RequestId, requestCopy.RequestId);
+        Assert.Equal(request.Count, requestCopy.Count);
+
+        var response = new NpcIdBatchAllocationResponse
+        {
+            RequestId = request.RequestId,
+            Accepted = true,
+            ReasonCode = "allocated",
+            Npcs = [new NpcOwnershipLease
+            {
+                NpcId = Guid.NewGuid(),
+                InstanceId = request.InstanceId,
+                OwnershipVersion = 1
+            }]
+        };
+        var responseCopy = MessagePackSerializer.Deserialize<NpcIdBatchAllocationResponse>(
+            MessagePackSerializer.Serialize(response));
+        Assert.Equal(response.RequestId, responseCopy.RequestId);
+        Assert.Equal(response.Npcs[0].NpcId, responseCopy.Npcs[0].NpcId);
+        Assert.Equal(response.Npcs[0].OwnershipVersion, responseCopy.Npcs[0].OwnershipVersion);
+    }
+
+    [Fact]
+    public void NpcPeerSnapshotTransfer_RoundTripsAndRejectsOversizedPayloads()
+    {
+        var request = new NpcPeerSnapshotTransfer
+        {
+            TransferId = Guid.NewGuid(),
+            SourceInstanceId = "li-01",
+            TargetInstanceId = "br-01",
+            SnapshotMessagePack = [1, 2, 3]
+        };
+        var copy = MessagePackSerializer.Deserialize<NpcPeerSnapshotTransfer>(MessagePackSerializer.Serialize(request));
+        NpcPeerSnapshotTransferValidator.Validate(copy);
+        Assert.Equal(request.TransferId, copy.TransferId);
+        Assert.Equal(request.SnapshotMessagePack, copy.SnapshotMessagePack);
+        Assert.Throws<ProtocolViolationException>(() => NpcPeerSnapshotTransferValidator.Validate(
+            new NpcPeerSnapshotTransfer
+            {
+                TransferId = Guid.NewGuid(),
+                SourceInstanceId = "li-01",
+                TargetInstanceId = "br-01",
+                SnapshotMessagePack = new byte[NpcPeerSnapshotTransferValidator.MaximumSnapshotBytes + 1]
+            }));
+    }
+
     private static ClusterHello Hello(string nodeId, string[] capabilities, string[]? ownedSystems = null) => new()
     {
         NodeId = nodeId,

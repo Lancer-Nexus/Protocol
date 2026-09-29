@@ -17,12 +17,21 @@ public enum ClusterMessageType : ushort
     TransferCommit = 102,
     TransferAbort = 103,
     TransferComplete = 104,
+    NpcTransferPrepare = 105,
+    NpcTransferPrepared = 106,
+    NpcTransferPhase = 107,
     AgentHeartbeat = 200,
     InstanceHeartbeat = 201,
     AgentHeartbeatResponse = 202,
     InstanceHeartbeatResponse = 203,
     PermissionRevisionChanged = 300,
     PermissionRevisionAcknowledged = 301
+}
+
+public static class ClusterCapabilities
+{
+    public const string NpcOwnershipV1 = "npc_ownership_v1";
+    public const string NpcTransferV1 = "npc_transfer_v1";
 }
 
 [Flags]
