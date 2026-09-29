@@ -31,6 +31,11 @@ AI state/timers/random state, target NPC identity and mission runtime bytes.
 Object references must be resolved by stable IDs on import. `ExtensionData`
 allows engine-specific component state to be carried without changing the
 shared contract; its contents still need a documented schema per producer.
+NPC transfer snapshot schema 4 adds ordered formation members with stable NPC
+or character IDs, member offsets, leader identity and the player's formation
+position/target. The validator rejects partial NPC membership, duplicate
+members and non-finite offsets; the source and target transfer the formation as
+one unit.
 The player mission runtime payload uses its own schema version. Version 4
 includes active/completed triggers, condition storage, pending lines, objective
 and random state, each mission label's spawned/alive/destroyed members, and a

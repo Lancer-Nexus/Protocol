@@ -48,7 +48,7 @@ public static class NpcTransferContractValidator
     public static void Validate(NpcTransferSnapshot snapshot)
     {
         ArgumentNullException.ThrowIfNull(snapshot);
-        if (snapshot.TransferId == Guid.Empty || snapshot.SnapshotSchemaVersion != 3 ||
+        if (snapshot.TransferId == Guid.Empty || snapshot.SnapshotSchemaVersion != 4 ||
             string.IsNullOrWhiteSpace(snapshot.TargetSystemId) || snapshot.TargetSystemId.Length > 96 ||
             snapshot.MissionRuntimeId is not null && snapshot.MissionRuntimeState is not { Length: > 0 and <= MaximumRuntimePayloadLength })
             throw Invalid("NPC transfer snapshot has an invalid transfer ID or unsupported schema.");
@@ -73,6 +73,7 @@ public static class NpcTransferContractValidator
         }
 
         var declaredIds = snapshot.NpcIds.ToHashSet();
+        ValidateFormations(snapshot, declaredIds);
         var snapshotIds = new HashSet<Guid>();
         foreach (var npc in snapshot.Npcs)
         {
@@ -93,6 +94,34 @@ public static class NpcTransferContractValidator
                 throw Invalid("NPC runtime payload is not a valid RuntimeSchemaVersion 1 message.");
             }
             ValidateRuntimeState(state);
+        }
+    }
+
+    private static void ValidateFormations(NpcTransferSnapshot snapshot, HashSet<Guid> declaredNpcIds)
+    {
+        if (snapshot.Formations is null || snapshot.Formations.Length > MaximumNpcsPerTransfer)
+            throw Invalid("NPC formation collection is missing or exceeds its limit.");
+        var formationIds = new HashSet<Guid>();
+        foreach (var formation in snapshot.Formations)
+        {
+            if (formation is null || formation.FormationId == Guid.Empty || !formationIds.Add(formation.FormationId) ||
+                formation.Members is null || formation.Members.Length is < 2 or > MaximumNpcsPerTransfer + 1 ||
+                formation.Members.Count(member => member?.IsLeader == true) != 1 ||
+                formation.PlayerPosition is not null && !Finite(formation.PlayerPosition) ||
+                formation.PlayerTargetPosition is not null && !Finite(formation.PlayerTargetPosition))
+                throw Invalid("NPC formation has invalid identity, membership or player offsets.");
+            var members = new HashSet<string>(StringComparer.Ordinal);
+            foreach (var member in formation.Members)
+            {
+                if (member is null || member.Offset is null || !Finite(member.Offset) ||
+                    member.NpcId.HasValue == member.CharacterId.HasValue ||
+                    member.NpcId is { } npcId && (!declaredNpcIds.Contains(npcId) || npcId == Guid.Empty) ||
+                    member.CharacterId is <= 0)
+                    throw Invalid("NPC formation member has an invalid stable reference or offset.");
+                var key = member.NpcId.HasValue ? $"npc:{member.NpcId:D}" : $"character:{member.CharacterId}";
+                if (!members.Add(key))
+                    throw Invalid("NPC formation contains duplicate members.");
+            }
         }
     }
 

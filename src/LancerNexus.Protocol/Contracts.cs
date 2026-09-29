@@ -358,10 +358,29 @@ public sealed class NpcTransferSnapshot
     [Key(1)] public Guid[] NpcIds { get; init; } = [];
     [Key(2)] public Guid? FormationId { get; init; }
     [Key(3)] public Guid? MissionRuntimeId { get; init; }
-    [Key(4)] public ushort SnapshotSchemaVersion { get; init; } = 3;
+    [Key(4)] public ushort SnapshotSchemaVersion { get; init; } = 4;
     [Key(5)] public NpcRuntimeSnapshot[] Npcs { get; init; } = [];
     [Key(6)] public string TargetSystemId { get; init; } = "";
     [Key(7)] public byte[] MissionRuntimeState { get; init; } = [];
+    [Key(8)] public NpcFormationStateV1[] Formations { get; init; } = [];
+}
+
+[MessagePackObject]
+public sealed class NpcFormationStateV1
+{
+    [Key(0)] public Guid FormationId { get; init; }
+    [Key(1)] public NpcFormationMemberV1[] Members { get; init; } = [];
+    [Key(2)] public NpcVector3? PlayerPosition { get; init; }
+    [Key(3)] public NpcVector3? PlayerTargetPosition { get; init; }
+}
+
+[MessagePackObject]
+public sealed class NpcFormationMemberV1
+{
+    [Key(0)] public bool IsLeader { get; init; }
+    [Key(1)] public Guid? NpcId { get; init; }
+    [Key(2)] public long? CharacterId { get; init; }
+    [Key(3)] public NpcVector3 Offset { get; init; } = new();
 }
 
 [MessagePackObject]

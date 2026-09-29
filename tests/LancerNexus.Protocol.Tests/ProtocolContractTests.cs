@@ -609,6 +609,64 @@ public sealed class ProtocolContractTests
     }
 
     [Fact]
+    public void NpcTransferFormations_RoundTripAndRejectPartialMembership()
+    {
+        var npcId = Guid.NewGuid();
+        var formation = new NpcFormationStateV1
+        {
+            FormationId = Guid.NewGuid(),
+            Members =
+            [
+                new NpcFormationMemberV1 { IsLeader = true, NpcId = npcId },
+                new NpcFormationMemberV1 { CharacterId = 42, Offset = new NpcVector3 { X = 60 } }
+            ],
+            PlayerPosition = new NpcVector3 { Y = -60 },
+            PlayerTargetPosition = new NpcVector3 { Z = 10 }
+        };
+        var snapshot = CreateNpcSnapshot(npcId, formation);
+        var copy = MessagePackSerializer.Deserialize<NpcTransferSnapshot>(MessagePackSerializer.Serialize(snapshot));
+        NpcTransferContractValidator.Validate(copy);
+        Assert.Equal(formation.FormationId, copy.Formations[0].FormationId);
+        Assert.Equal(42, copy.Formations[0].Members[1].CharacterId);
+        Assert.Equal(60, copy.Formations[0].Members[1].Offset.X);
+
+        var partial = CreateNpcSnapshot(npcId, new NpcFormationStateV1
+        {
+            FormationId = Guid.NewGuid(),
+            Members =
+            [
+                new NpcFormationMemberV1 { IsLeader = true, NpcId = Guid.NewGuid() },
+                new NpcFormationMemberV1 { NpcId = npcId }
+            ]
+        });
+        Assert.Throws<ProtocolViolationException>(() => NpcTransferContractValidator.Validate(partial));
+    }
+
+    private static NpcTransferSnapshot CreateNpcSnapshot(Guid npcId, NpcFormationStateV1 formation) => new()
+    {
+        TransferId = Guid.NewGuid(),
+        NpcIds = [npcId],
+        Formations = [formation],
+        TargetSystemId = "li02",
+        Npcs =
+        [
+            new NpcRuntimeSnapshot
+            {
+                NpcId = npcId,
+                OwnershipVersion = 1,
+                SystemId = "li01",
+                RuntimeState = MessagePackSerializer.Serialize(new NpcRuntimeStateV1
+                {
+                    Orientation = new NpcQuaternion { W = 1 },
+                    LoadoutArchetype = "npc_fighter",
+                    Autopilot = new NpcAutopilotState { Behavior = "None" },
+                    Ai = new NpcAiState { StateId = "none", PreviousStateId = "none" }
+                })
+            }
+        ]
+    };
+
+    [Fact]
     public void NpcTransferContractValidator_RejectsDuplicateIdsAndInvalidRuntimeNumbers()
     {
         var npcId = Guid.NewGuid();
