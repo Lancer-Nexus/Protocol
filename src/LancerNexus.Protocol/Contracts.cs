@@ -365,6 +365,14 @@ public sealed class NpcTransferSnapshot
     [Key(8)] public NpcFormationStateV1[] Formations { get; init; } = [];
 }
 
+/// <summary>Keyset page of committed NPC transfers that still own their complete NPC set on a target.</summary>
+[MessagePackObject]
+public sealed class NpcTransferRecoveryPageV1
+{
+    [Key(0)] public Guid[] TransferIds { get; init; } = [];
+    [Key(1)] public Guid? NextAfterTransferId { get; init; }
+}
+
 [MessagePackObject]
 public sealed class NpcFormationStateV1
 {

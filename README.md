@@ -51,6 +51,9 @@ contains GameServer identity allocation, mTLS QUIC staging, simulation freeze,
 target restore and coupled player/NPC activation. This protocol defines the
 wire contract; deployments still need matching Coordinator migrations,
 capabilities, certificates and server configuration before handoffs can run.
+Coordinator journal recovery uses the versioned `NpcTransferRecoveryPageV1`
+contract for keyset-paginated committed transfers; returned entries are limited
+to groups whose complete NPC lease set remains active on the target instance.
 
 ## Development
 
