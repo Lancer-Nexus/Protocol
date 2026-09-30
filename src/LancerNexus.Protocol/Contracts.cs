@@ -229,6 +229,23 @@ public sealed class NpcTransferPrepareRequest
     [Key(8)] public string IdempotencyKey { get; init; } = "";
 }
 
+/// <summary>Finds a ready NPC-transfer-capable instance that owns a destination system.</summary>
+[MessagePackObject]
+public sealed class NpcTransferTargetResolveRequestV1
+{
+    [Key(0)] public string SourceInstanceId { get; init; } = "";
+    [Key(1)] public string TargetSystemId { get; init; } = "";
+}
+
+[MessagePackObject]
+public sealed class NpcTransferTargetResolveResultV1
+{
+    [Key(0)] public bool Found { get; init; }
+    [Key(1)] public string TargetInstanceId { get; init; } = "";
+    [Key(2)] public string? TargetEndpoint { get; init; }
+    [Key(3)] public string ReasonCode { get; init; } = "";
+}
+
 [MessagePackObject]
 public sealed class NpcTransferPrepared
 {
@@ -372,6 +389,7 @@ public sealed class NpcTransferSnapshot
     [Key(6)] public string TargetSystemId { get; init; } = "";
     [Key(7)] public byte[] MissionRuntimeState { get; init; } = [];
     [Key(8)] public NpcFormationStateV1[] Formations { get; init; } = [];
+    [Key(9)] public string? TargetArrivalObject { get; init; }
 }
 
 /// <summary>Keyset page of committed NPC transfers that still own their complete NPC set on a target.</summary>

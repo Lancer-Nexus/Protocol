@@ -609,6 +609,23 @@ public sealed class ProtocolContractTests
     }
 
     [Fact]
+    public void NpcTransferTargetResolution_UsesVersionedContractAndValidatesIdentifiers()
+    {
+        var request = new NpcTransferTargetResolveRequestV1
+        {
+            SourceInstanceId = "li-01",
+            TargetSystemId = "rh01"
+        };
+        NpcTransferContractValidator.Validate(request);
+        var copy = MessagePackSerializer.Deserialize<NpcTransferTargetResolveRequestV1>(
+            MessagePackSerializer.Serialize(request));
+        Assert.Equal(request.SourceInstanceId, copy.SourceInstanceId);
+        Assert.Equal(request.TargetSystemId, copy.TargetSystemId);
+        Assert.Throws<ProtocolViolationException>(() => NpcTransferContractValidator.Validate(
+            new NpcTransferTargetResolveRequestV1 { SourceInstanceId = "li-01" }));
+    }
+
+    [Fact]
     public void NpcTransferFormations_RoundTripAndRejectPartialMembership()
     {
         var npcId = Guid.NewGuid();

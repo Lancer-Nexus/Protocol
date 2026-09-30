@@ -45,11 +45,20 @@ public static class NpcTransferContractValidator
             throw Invalid("Optional NPC transfer identifiers cannot be empty GUIDs.");
     }
 
+    public static void Validate(NpcTransferTargetResolveRequestV1 request)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+        if (string.IsNullOrWhiteSpace(request.SourceInstanceId) || request.SourceInstanceId.Length > 96 ||
+            string.IsNullOrWhiteSpace(request.TargetSystemId) || request.TargetSystemId.Length > 96)
+            throw Invalid("NPC transfer target resolution has invalid instance or system identifiers.");
+    }
+
     public static void Validate(NpcTransferSnapshot snapshot)
     {
         ArgumentNullException.ThrowIfNull(snapshot);
         if (snapshot.TransferId == Guid.Empty || snapshot.SnapshotSchemaVersion != 4 ||
             string.IsNullOrWhiteSpace(snapshot.TargetSystemId) || snapshot.TargetSystemId.Length > 96 ||
+            snapshot.TargetArrivalObject is { Length: > 96 } ||
             snapshot.MissionRuntimeId is not null && snapshot.MissionRuntimeState is not { Length: > 0 and <= MaximumRuntimePayloadLength })
             throw Invalid("NPC transfer snapshot has an invalid transfer ID or unsupported schema.");
         ValidateNpcIds(snapshot.NpcIds);
