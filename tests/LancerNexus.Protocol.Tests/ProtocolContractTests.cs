@@ -542,7 +542,7 @@ public sealed class ProtocolContractTests
                 NpcId = npcId,
                 OwnershipVersion = 9,
                 SystemId = "rh01",
-                RuntimeSchemaVersion = 2,
+                RuntimeSchemaVersion = 3,
                 RuntimeState = runtimeBytes
             }]
         };

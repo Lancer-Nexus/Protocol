@@ -79,7 +79,7 @@ public static class NpcTransferContractValidator
         {
             if (npc is null || npc.NpcId == Guid.Empty || !snapshotIds.Add(npc.NpcId) ||
                 !declaredIds.Contains(npc.NpcId) || npc.OwnershipVersion <= 0 ||
-                string.IsNullOrWhiteSpace(npc.SystemId) || npc.RuntimeSchemaVersion != 2 ||
+                string.IsNullOrWhiteSpace(npc.SystemId) || npc.RuntimeSchemaVersion != 3 ||
                 npc.RuntimeState is null || npc.RuntimeState.Length == 0 ||
                 npc.RuntimeState.Length > MaximumRuntimePayloadLength)
                 throw Invalid("NPC runtime snapshot has invalid identity, ownership or payload metadata.");
@@ -91,7 +91,7 @@ public static class NpcTransferContractValidator
             }
             catch (MessagePackSerializationException)
             {
-                throw Invalid("NPC runtime payload is not a valid RuntimeSchemaVersion 1 message.");
+                throw Invalid("NPC runtime payload is not a valid RuntimeSchemaVersion 3 message.");
             }
             ValidateRuntimeState(state);
         }
@@ -200,6 +200,12 @@ public static class NpcTransferContractValidator
                 string.IsNullOrWhiteSpace(item.Hardpoint) || !float.IsFinite(item.Health) || item.Health < 0 ||
                 !float.IsFinite(item.Energy) || item.Energy < 0 || item.ExtensionData is null) ||
             state.Cargo.Any(item => item is null || string.IsNullOrWhiteSpace(item.ItemId) || item.Count <= 0) ||
+            state.StructuralParts is null || state.StructuralParts.Length > 512 ||
+            state.StructuralParts.Any(part => part is null || string.IsNullOrWhiteSpace(part.PartName) ||
+                part.PartName.Length > 96 || !float.IsFinite(part.HealthFraction) ||
+                part.HealthFraction is < 0 or > 1 || part.Destroyed && part.HealthFraction != 0) ||
+            state.StructuralParts.Select(part => part.PartName).Distinct(StringComparer.OrdinalIgnoreCase).Count() !=
+                state.StructuralParts.Length ||
             !float.IsFinite(state.Autopilot.Throttle) || state.Autopilot.Throttle is < 0 or > 1 ||
             !double.IsFinite(state.Autopilot.BehaviorElapsedSeconds) || state.Autopilot.BehaviorElapsedSeconds < 0 ||
             state.Autopilot.TargetPosition is not null && !Finite(state.Autopilot.TargetPosition) ||

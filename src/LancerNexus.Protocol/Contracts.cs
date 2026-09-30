@@ -260,12 +260,12 @@ public sealed class NpcRuntimeSnapshot
     [Key(0)] public Guid NpcId { get; init; }
     [Key(1)] public long OwnershipVersion { get; init; }
     [Key(2)] public string SystemId { get; init; } = "";
-    [Key(3)] public ushort RuntimeSchemaVersion { get; init; } = 2;
+    [Key(3)] public ushort RuntimeSchemaVersion { get; init; } = 3;
     [Key(4)] public byte[] RuntimeState { get; init; } = [];
 }
 
 /// <summary>
-/// MessagePack payload for RuntimeSchemaVersion 1. All references to other runtime objects
+/// MessagePack payload for RuntimeSchemaVersion 3. All references to other runtime objects
 /// use stable NPC IDs; no GameObject or component references cross the transfer boundary.
 /// </summary>
 [MessagePackObject]
@@ -291,6 +291,15 @@ public sealed class NpcRuntimeStateV1
     [Key(17)] public string CommHeadId { get; init; } = "";
     [Key(18)] public string CommBodyId { get; init; } = "";
     [Key(19)] public string CommAccessoryId { get; init; } = "";
+    [Key(20)] public NpcStructuralPartStateV1[] StructuralParts { get; init; } = [];
+}
+
+[MessagePackObject]
+public sealed class NpcStructuralPartStateV1
+{
+    [Key(0)] public string PartName { get; init; } = "";
+    [Key(1)] public float HealthFraction { get; init; }
+    [Key(2)] public bool Destroyed { get; init; }
 }
 
 [MessagePackObject]

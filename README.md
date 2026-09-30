@@ -25,9 +25,10 @@ versioned (`SnapshotSchemaVersion` and `RuntimeSchemaVersion`) and travel over
 the authenticated instance-to-instance transfer channel; reject unsupported
 versions and keep the target inactive until `Committed`.
 
-`NpcRuntimeStateV1` defines the core MessagePack state shape: transform and
-velocities, health, loadout/equipment/cargo, autopilot target and elapsed time,
-AI state/timers/random state, target NPC identity and mission runtime bytes.
+`NpcRuntimeStateV1` RuntimeSchemaVersion 3 defines the core MessagePack state
+shape: transform and velocities, health, loadout/equipment/cargo, structural
+part health and destruction, autopilot target and elapsed time, AI
+state/timers/random state, target NPC identity and mission runtime bytes.
 Object references must be resolved by stable IDs on import. `ExtensionData`
 allows engine-specific component state to be carried without changing the
 shared contract; its contents still need a documented schema per producer.
