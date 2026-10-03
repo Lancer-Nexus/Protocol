@@ -43,6 +43,15 @@ public sealed class ProtocolContractTests
         var legacy = MessagePackSerializer.Deserialize<InstanceHeartbeat>(buffer.WrittenMemory);
         Assert.Equal("li03", legacy.SystemId);
         Assert.Null(legacy.NpcTransferEndpoint);
+        var prepared = new NpcTransferPrepared { TargetEndpoint = "udp://127.0.0.3:25444",
+            NpcTransferEndpoint = value.NpcTransferEndpoint };
+        var restored = MessagePackSerializer.Deserialize<NpcTransferPrepared>(MessagePackSerializer.Serialize(prepared));
+        Assert.Equal(prepared.TargetEndpoint, restored.TargetEndpoint);
+        Assert.Equal(prepared.NpcTransferEndpoint, restored.NpcTransferEndpoint);
+        var target = new NpcTransferTargetResolveResultV1 { TargetEndpoint = prepared.TargetEndpoint,
+            NpcTransferEndpoint = prepared.NpcTransferEndpoint };
+        Assert.Equal(target.NpcTransferEndpoint, MessagePackSerializer.Deserialize<NpcTransferTargetResolveResultV1>(
+            MessagePackSerializer.Serialize(target)).NpcTransferEndpoint);
     }
 
     [Theory]

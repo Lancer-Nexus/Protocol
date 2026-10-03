@@ -246,6 +246,7 @@ public sealed class NpcTransferTargetResolveResultV1
     [Key(1)] public string TargetInstanceId { get; init; } = "";
     [Key(2)] public string? TargetEndpoint { get; init; }
     [Key(3)] public string ReasonCode { get; init; } = "";
+    [Key(4)] public string? NpcTransferEndpoint { get; init; }
 }
 
 [MessagePackObject]
@@ -256,6 +257,7 @@ public sealed class NpcTransferPrepared
     [Key(2)] public string? TargetEndpoint { get; init; }
     [Key(3)] public DateTime ExpiresUtc { get; init; }
     [Key(4)] public string ReasonCode { get; init; } = "";
+    [Key(5)] public string? NpcTransferEndpoint { get; init; }
 }
 
 /// <summary>Durable ownership fence for one moving NPC.</summary>
