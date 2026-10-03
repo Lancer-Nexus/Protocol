@@ -84,3 +84,5 @@ For the full migration, evaluation order and current process integration status,
 private `quic://host:port` listener. NPC preparation and target resolution return
 this endpoint when present; legacy heartbeats retain the game-host/configured-port
 fallback. Instances sharing a host should use distinct QUIC ports.
+
+`NpcMissionAuthorityRequestV1`/`NpcMissionAuthorityResultV1` define the private Coordinator-to-Gateway decision boundary. The shared transfer/mission ID, source, target, system and requested commit/abort must match. Commit requires a positive durable character lease version; abort carries no committed version. An accepted abort is a durable veto of later character commit, not a timeout or proof of an active source lease. Unknown schemas, unavailable authority or rejected/mismatched replies authorize no NPC phase change. Retry the same request after uncertain delivery; decisions are permanent and idempotent. Service authentication and SQL arbitration are Gateway responsibilities.
