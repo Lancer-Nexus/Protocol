@@ -154,4 +154,23 @@ public sealed class NpcCheckpointTests
             { NpcId = npc.NpcId, OwnershipVersion = 3 }).ToArray() }));
     }
 
+
+    [Fact]
+    public void RecoveryKeepsOriginalRequestSeparateFromCommittedRevisions()
+    {
+        var request = Request();
+        var recovery = new NpcCheckpointRecoveryV1 { Snapshot = request,
+            Result = new() { RequestId = request.RequestId, Accepted = true, ReasonCode = "checkpointed",
+                Revisions = [request.ExpectedRevisions[0] with { Revision = 8 }] } };
+        var bytes = MessagePackSerializer.Serialize(recovery);
+        Assert.Equal(2, new MessagePackReader(bytes).ReadArrayHeader());
+        var decoded = MessagePackSerializer.Deserialize<NpcCheckpointRecoveryV1>(bytes);
+        Assert.Equal(7, decoded.Snapshot.ExpectedRevisions[0].Revision);
+        Assert.Equal(8, decoded.Result.Revisions[0].Revision);
+        var page = new NpcCheckpointRecoveryPageV1 { CheckpointIds = [request.RequestId],
+            NextAfterCheckpointId = request.RequestId };
+        Assert.Equal(page.CheckpointIds, MessagePackSerializer.Deserialize<NpcCheckpointRecoveryPageV1>(
+            MessagePackSerializer.Serialize(page)).CheckpointIds);
+    }
+
 }

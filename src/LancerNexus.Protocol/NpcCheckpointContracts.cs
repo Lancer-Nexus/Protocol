@@ -116,3 +116,22 @@ public static class NpcCheckpointContractValidator
     private static bool Identifier(string value) => !string.IsNullOrWhiteSpace(value) && value.Length <= 96;
     private static ProtocolViolationException Invalid(string message) => new(message);
 }
+
+/// <summary>
+/// An acknowledged checkpoint. Snapshot contains original expected revisions;
+/// Result contains the revisions/fences after commit. Recovery must revalidate
+/// every surviving member before creating or activating runtime objects.
+/// </summary>
+[MessagePackObject]
+public sealed record NpcCheckpointRecoveryV1
+{
+    [Key(0)] public NpcCheckpointWriteRequestV1 Snapshot { get; init; } = new();
+    [Key(1)] public NpcCheckpointWriteResponseV1 Result { get; init; } = new();
+}
+
+[MessagePackObject]
+public sealed record NpcCheckpointRecoveryPageV1
+{
+    [Key(0)] public Guid[] CheckpointIds { get; init; } = [];
+    [Key(1)] public Guid? NextAfterCheckpointId { get; init; }
+}
