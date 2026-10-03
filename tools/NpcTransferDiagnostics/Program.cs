@@ -9,8 +9,11 @@ using MessagePack;
 
 try
 {
-    if (args is ["snapshot", var path])
+    if (args.Length is 2 or 3 && args[0] == "snapshot" && (args.Length == 2 || args[2] == "--json"))
     {
+        var path = args[1];
+        var jsonOutput = args.Length == 3;
+        var reports = new List<object>();
         var files = Directory.Exists(path)
             ? Directory.GetFiles(path, "*.source.msgpack").Order(StringComparer.Ordinal).ToArray()
             : [path];
@@ -20,6 +23,23 @@ try
             var options = MessagePackSerializerOptions.Standard.WithSecurity(MessagePackSecurity.UntrustedData);
             var snapshot = MessagePackSerializer.Deserialize<NpcTransferSnapshot>(bytes, options);
             NpcTransferContractValidator.Validate(snapshot);
+            if (jsonOutput)
+            {
+                reports.Add(new
+                {
+                    snapshot.TransferId, snapshot.TargetSystemId, snapshot.TargetArrivalObject,
+                    snapshot.MissionRuntimeId,
+                    SnapshotSha256 = Convert.ToHexString(SHA256.HashData(bytes)),
+                    Mission = snapshot.MissionRuntimeState.Length == 0 ? null :
+                        MessagePackSerializer.Deserialize<NpcMissionRuntimeStateV1>(snapshot.MissionRuntimeState, options),
+                    Npcs = snapshot.Npcs.Select(npc => new
+                    {
+                        npc.NpcId, npc.OwnershipVersion, npc.SystemId,
+                        State = MessagePackSerializer.Deserialize<NpcRuntimeStateV1>(npc.RuntimeState, options)
+                    }).ToArray()
+                });
+                continue;
+            }
             Console.WriteLine($"Transfer {snapshot.TransferId:D}: target={snapshot.TargetSystemId}, NPCs={snapshot.Npcs.Length}, SHA256={Convert.ToHexString(SHA256.HashData(bytes))}");
             foreach (var npc in snapshot.Npcs)
             {
@@ -30,6 +50,8 @@ try
                     Console.WriteLine($"  {name}={ai.RootElement.GetProperty(name).GetRawText()}");
             }
         }
+        if (jsonOutput)
+            Console.WriteLine(JsonSerializer.Serialize(reports, new JsonSerializerOptions { WriteIndented = true }));
         return 0;
     }
 
@@ -77,7 +99,7 @@ try
         return 0;
     }
 
-    Console.Error.WriteLine("Usage: NpcTransferDiagnostics snapshot <source snapshot file or directory>");
+    Console.Error.WriteLine("Usage: NpcTransferDiagnostics snapshot <source snapshot file or directory> [--json]");
     Console.Error.WriteLine("       NpcTransferDiagnostics quic <source LLServer config> <target IP> <port> <target instance ID>");
     return 2;
 }

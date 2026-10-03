@@ -6,11 +6,16 @@ It references the repository's Protocol project and uses its explicit MessagePac
 ```bash
 dotnet run --project tools/NpcTransferDiagnostics -- snapshot /path/to/instance-npc-transfer
 dotnet run --project tools/NpcTransferDiagnostics -- snapshot /path/to/transfer.source.msgpack
+dotnet run --project tools/NpcTransferDiagnostics -- snapshot /path/to/transfer.msgpack --json
 dotnet run --project tools/NpcTransferDiagnostics -- quic /path/to/source-llserver.json 127.0.0.3 26455 li02
 ```
 
 Run from the Protocol repository. The `snapshot` command reports NPC identities,
 ownership versions, snapshot hashes and steering/physics state without changing the files.
+`--json` exports a JSON array of validated snapshots with the explicit NPC runtime
+and MissionRuntime contracts, including timers, random state and labels. This is
+useful for comparing a frozen handoff with local `npc-state` simulation captures.
+It reads NPC snapshots only; it does not read character snapshots or credentials.
 The `quic` command loads the source instance's certificate and CA from its LLServer
 configuration. Certificate paths must be absolute or relative to the current directory.
 Provide the PFX password through `LANCER_NEXUS_NPC_TRANSFER_CERT_PASSWORD`, for example
