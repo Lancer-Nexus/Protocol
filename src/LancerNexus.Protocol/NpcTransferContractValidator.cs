@@ -5,6 +5,13 @@ namespace LancerNexus.Protocol;
 /// <summary>Validates NPC transfer messages before they enter coordinator or simulation state.</summary>
 public static class NpcTransferContractValidator
 {
+    public static bool IsValidPeerEndpoint(string? endpoint) =>
+        endpoint is { Length: > 0 and <= 512 } &&
+        Uri.TryCreate(endpoint, UriKind.Absolute, out var uri) && uri.Scheme == "quic" &&
+        !string.IsNullOrWhiteSpace(uri.Host) && uri.Port is > 0 and <= 65535 &&
+        string.IsNullOrEmpty(uri.UserInfo) && string.IsNullOrEmpty(uri.Query) &&
+        string.IsNullOrEmpty(uri.Fragment) && uri.AbsolutePath is "" or "/";
+
     public const int MaximumNpcsPerTransfer = 256;
     public const int MaximumRuntimePayloadLength = 4 * 1024 * 1024;
 

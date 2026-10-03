@@ -79,3 +79,8 @@ Permission synchronization uses `PermissionRevisionChanged` and `PermissionRevis
 For the full migration, evaluation order and current process integration status, see [Administration's permission system guide](../Administration/docs/permission-system.md).
 
 `InstanceHeartbeat.SystemIds` is optional at MessagePack key 10. Legacy ten-field messages decode with an empty list, retaining the primary `SystemId`; group-aware Coordinators use the full list without duplicating capacity.
+
+`InstanceHeartbeat.NpcTransferEndpoint` is optional at key 11 and advertises the
+private `quic://host:port` listener. NPC preparation and target resolution return
+this endpoint when present; legacy heartbeats retain the game-host/configured-port
+fallback. Instances sharing a host should use distinct QUIC ports.

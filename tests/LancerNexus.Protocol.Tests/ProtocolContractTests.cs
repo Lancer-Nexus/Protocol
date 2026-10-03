@@ -16,7 +16,7 @@ public sealed class ProtocolContractTests
         var copy = MessagePackSerializer.Deserialize<InstanceHeartbeat>(bytes);
         Assert.Equal(value.SystemIds, copy.SystemIds);
         var reader = new MessagePackReader(bytes);
-        Assert.Equal(11, reader.ReadArrayHeader());
+        Assert.Equal(12, reader.ReadArrayHeader());
         var buffer = new System.Buffers.ArrayBufferWriter<byte>();
         var writer = new MessagePackWriter(buffer);
         writer.WriteArrayHeader(10);
@@ -25,7 +25,39 @@ public sealed class ProtocolContractTests
         var legacy = MessagePackSerializer.Deserialize<InstanceHeartbeat>(buffer.WrittenMemory);
         Assert.Equal("li01", legacy.SystemId);
         Assert.Empty(legacy.SystemIds);
+        Assert.Null(legacy.NpcTransferEndpoint);
     }
+    [Fact]
+    public void NpcPeerEndpointRoundTripsAndLegacyElevenFieldHeartbeatOmitsIt()
+    {
+        var value = new InstanceHeartbeat { SystemId = "li03", NpcTransferEndpoint = "quic://127.0.0.3:26456" };
+        var bytes = MessagePackSerializer.Serialize(value);
+        Assert.Equal(value.NpcTransferEndpoint, MessagePackSerializer.Deserialize<InstanceHeartbeat>(bytes).NpcTransferEndpoint);
+        var reader = new MessagePackReader(bytes);
+        Assert.Equal(12, reader.ReadArrayHeader());
+        var buffer = new System.Buffers.ArrayBufferWriter<byte>();
+        var writer = new MessagePackWriter(buffer);
+        writer.WriteArrayHeader(11);
+        for (var i = 0; i < 11; i++) writer.WriteRaw(reader.ReadRaw());
+        writer.Flush();
+        var legacy = MessagePackSerializer.Deserialize<InstanceHeartbeat>(buffer.WrittenMemory);
+        Assert.Equal("li03", legacy.SystemId);
+        Assert.Null(legacy.NpcTransferEndpoint);
+    }
+
+    [Theory]
+    [InlineData("quic://127.0.0.3:26456", true)]
+    [InlineData("quic://[::1]:26456", true)]
+    [InlineData("udp://127.0.0.3:26456", false)]
+    [InlineData("quic://127.0.0.3", false)]
+    [InlineData("quic://127.0.0.3:0", false)]
+    [InlineData("quic://user@host:26456", false)]
+    [InlineData("quic://host:26456/path", false)]
+    [InlineData("quic://host:26456?key=value", false)]
+    [InlineData("quic://host:26456#fragment", false)]
+    [InlineData(null, false)]
+    public void PrivateNpcEndpointRequiresAnExplicitQuicPort(string? endpoint, bool valid) =>
+        Assert.Equal(valid, NpcTransferContractValidator.IsValidPeerEndpoint(endpoint));
     [Fact]
     public void ClientVersionContracts_RoundTripWithStableKeys()
     {

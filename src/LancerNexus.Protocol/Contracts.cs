@@ -56,6 +56,8 @@ public sealed class InstanceHeartbeat
     // Empty retains the legacy single-SystemId behavior.
     private string[]? systemIds;
     [Key(10)] public string[] SystemIds { get => systemIds ?? []; init => systemIds = value; }
+    // Optional private quic://host:port; absent peers retain the configured legacy transfer port.
+    [Key(11)] public string? NpcTransferEndpoint { get; init; }
 }
 
 [MessagePackObject]
