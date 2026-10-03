@@ -30,6 +30,7 @@ public enum ClusterMessageType : ushort
 
 public static class ClusterCapabilities
 {
+    public const string NpcCheckpointV1 = "npc_checkpoint_v1";
     public const string NpcOwnershipV1 = "npc_ownership_v1";
     public const string NpcRetirementV1 = "npc_retirement_v1";
     public const string NpcTransferV1 = "npc_transfer_v1";

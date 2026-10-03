@@ -97,3 +97,40 @@ entry separately, so a stale entry does not block unrelated valid entries.
 `NpcOwnershipLease.IsRetired` is appended at key 4; older four-field leases decode
 as active. Older consumers cannot safely reuse retired allocation results and must
 negotiate retirement support before enabling this lifecycle path.
+
+## NPC runtime checkpoints (contract foundation)
+
+`npc_checkpoint_v1` defines `NpcCheckpointWriteRequestV1` and its response.
+A write atomically stores live members, formations and optional MissionRuntime,
+and retires terminal members. The union of survivors and retirements contains at
+most 256 unique NPCs; expected revisions must match every ID and current ownership
+version exactly. Formations reference survivors and, when present, the mission's
+owning character. An empty survivor set is valid for terminal or mission-only
+writes. Runtime schema 3 and mission schema 4 reuse the transfer validators.
+The complete encoded write is limited to 15 MiB.
+
+Checkpoint revisions are compare-and-swap counters within an ownership version;
+revision zero means no checkpoint has been acknowledged in that fence. A successful
+write increments each checkpoint revision once. Survivors retain ownership versions;
+retirements increment ownership fences once and preserve permanent tombstones.
+Mission revisions additionally bind a stable runtime ID and the current character
+lease. SimulationTick is diagnostic and does not replace these fences. The service
+must check authenticated instance identity, current character authority, no pending
+NPC transfer, current revisions and group membership in durable arbitration.
+Structural validation alone establishes none of these authority conditions.
+
+The entire request succeeds or fails; there is no partial member acceptance.
+An accepted response returns every member's resulting ownership/checkpoint revision
+and, when a mission was included, the resulting mission revision. Rejected writes
+return no revisions and change no state. Unknown delivery outcomes retry the exact
+request ID and payload; the durable recorded result is permanent. Reusing an ID
+with another payload is rejected. A known revision/transfer conflict requires a
+new request after authoritative reconciliation, never blind replay of stale state.
+Timeout does not release frozen NPCs or permit terminal actors to be restored.
+Recovery must recheck current fences before activating the last acknowledged frame;
+checkpoints do not guarantee restoration of unacknowledged simulation ticks.
+
+These contracts are implemented and tested. Coordinator storage/endpoints,
+Gateway character-authority arbitration, stable mission runtime identity and
+GameServer checkpoint scheduling/recovery are not yet implemented. Do not advertise
+the capability or connect terminal hooks until those paths are available.

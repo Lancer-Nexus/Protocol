@@ -89,36 +89,43 @@ public static class NpcTransferContractValidator
         }
 
         var declaredIds = snapshot.NpcIds.ToHashSet();
-        ValidateFormations(snapshot, declaredIds);
+        ValidateFormations(snapshot.Formations, declaredIds);
         var snapshotIds = new HashSet<Guid>();
         foreach (var npc in snapshot.Npcs)
         {
-            if (npc is null || npc.NpcId == Guid.Empty || !snapshotIds.Add(npc.NpcId) ||
-                !declaredIds.Contains(npc.NpcId) || npc.OwnershipVersion <= 0 ||
-                string.IsNullOrWhiteSpace(npc.SystemId) || npc.RuntimeSchemaVersion != 3 ||
-                npc.RuntimeState is null || npc.RuntimeState.Length == 0 ||
-                npc.RuntimeState.Length > MaximumRuntimePayloadLength)
-                throw Invalid("NPC runtime snapshot has invalid identity, ownership or payload metadata.");
-
-            NpcRuntimeStateV1 state;
-            try
-            {
-                state = MessagePackSerializer.Deserialize<NpcRuntimeStateV1>(npc.RuntimeState);
-            }
-            catch (MessagePackSerializationException)
-            {
-                throw Invalid("NPC runtime payload is not a valid RuntimeSchemaVersion 3 message.");
-            }
-            ValidateRuntimeState(state);
+            if (npc is null || !snapshotIds.Add(npc.NpcId) || !declaredIds.Contains(npc.NpcId))
+                throw Invalid("NPC snapshot entries must exactly match the declared NPC IDs.");
+            Validate(npc);
         }
     }
 
-    private static void ValidateFormations(NpcTransferSnapshot snapshot, HashSet<Guid> declaredNpcIds)
+    /// <summary>Validates a runtime snapshot independently of handoff authority.</summary>
+    public static void Validate(NpcRuntimeSnapshot npc)
     {
-        if (snapshot.Formations is null || snapshot.Formations.Length > MaximumNpcsPerTransfer)
+        ArgumentNullException.ThrowIfNull(npc);
+        if (npc.NpcId == Guid.Empty || npc.OwnershipVersion <= 0 ||
+            string.IsNullOrWhiteSpace(npc.SystemId) || npc.SystemId.Length > 96 ||
+            npc.RuntimeSchemaVersion != 3 || npc.RuntimeState is not { Length: > 0 and <= MaximumRuntimePayloadLength })
+            throw Invalid("NPC runtime snapshot has invalid identity, ownership or payload metadata.");
+        NpcRuntimeStateV1 state;
+        try
+        {
+            state = MessagePackSerializer.Deserialize<NpcRuntimeStateV1>(npc.RuntimeState,
+                MessagePackSerializerOptions.Standard.WithSecurity(MessagePackSecurity.UntrustedData));
+        }
+        catch (MessagePackSerializationException)
+        {
+            throw Invalid("NPC runtime payload is not a valid RuntimeSchemaVersion 3 message.");
+        }
+        ValidateRuntimeState(state);
+    }
+
+    internal static void ValidateFormations(NpcFormationStateV1[] formations, HashSet<Guid> declaredNpcIds)
+    {
+        if (formations is null || formations.Length > MaximumNpcsPerTransfer)
             throw Invalid("NPC formation collection is missing or exceeds its limit.");
         var formationIds = new HashSet<Guid>();
-        foreach (var formation in snapshot.Formations)
+        foreach (var formation in formations)
         {
             if (formation is null || formation.FormationId == Guid.Empty || !formationIds.Add(formation.FormationId) ||
                 formation.Members is null || formation.Members.Length is < 2 or > MaximumNpcsPerTransfer + 1 ||
@@ -141,7 +148,7 @@ public static class NpcTransferContractValidator
         }
     }
 
-    private static void ValidateMissionRuntimeState(NpcMissionRuntimeStateV1? state)
+    internal static void ValidateMissionRuntimeState(NpcMissionRuntimeStateV1? state)
     {
         if (state is null || state.SchemaVersion != 4 || string.IsNullOrWhiteSpace(state.MissionNickname) ||
             state.MissionNickname.Length > 96 || state.RandomState == 0 ||

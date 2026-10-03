@@ -38,3 +38,16 @@ Maintain golden-message tests, compatibility tests for the previous protocol ver
 The base Nexus topology uses eight game instances, one per group: BR01-BR06 (`br-01`), BW01-BW10 (`bw-01`), EW01-EW05 (`ew-01`), IW01-IW06 (`iw-01`), KU01-KU06 (`ku-01`), LI01-LI05 (`li-01`), RH01-RH05 (`rh-01`), and `mixed-01` for all remaining registered systems. System nicknames are compared case insensitively and emitted lowercase. Folder names are not always world nicknames: `fp7` contains `fp7_system`; `intro` and `miners` are asset directories, not registered worlds.
 InstanceHeartbeat adds optional SystemIds at MessagePack key 10. Old ten-field messages must decode to an empty set, preserving legacy primary-SystemId routing. Do not renumber existing keys or multiply instance capacity per reported system.
 InstanceHeartbeat.NpcTransferEndpoint is optional at key 11; old ten/eleven-field messages decode to null. It identifies the private QUIC listener separately from the game endpoint. Preserve explicit ports in NPC handoffs.
+
+## NPC checkpoint boundary
+
+- Checkpoint writes use current NPC ownership versions and separate monotonic
+  checkpoint revisions. Reject duplicate/missing members, inconsistent fences,
+  retired members retained in formations, and oversized encoded writes.
+- Survivor snapshots, terminal retirements and MissionRuntime are an atomic write;
+  partial acceptance is forbidden. Replay records bind the exact request payload.
+- Validation of the wire contract does not attest current character authority.
+  Consumers must arbitrate NPC and character ownership before acknowledging writes.
+- Keep `npc_checkpoint_v1` disabled until durable storage, recovery and simulation
+  integration exist. Restoring an acknowledged checkpoint is not proof of exact
+  recovery of later, unacknowledged frames.
