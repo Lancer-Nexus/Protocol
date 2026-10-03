@@ -86,3 +86,14 @@ this endpoint when present; legacy heartbeats retain the game-host/configured-po
 fallback. Instances sharing a host should use distinct QUIC ports.
 
 `NpcMissionAuthorityRequestV1`/`NpcMissionAuthorityResultV1` define the private Coordinator-to-Gateway decision boundary. The shared transfer/mission ID, source, target, system and requested commit/abort must match. Commit requires a positive durable character lease version; abort carries no committed version. An accepted abort is a durable veto of later character commit, not a timeout or proof of an active source lease. Unknown schemas, unavailable authority or rejected/mismatched replies authorize no NPC phase change. Retry the same request after uncertain delivery; decisions are permanent and idempotent. Service authentication and SQL arbitration are Gateway responsibilities.
+
+`npc_retirement_v1` adds bounded, independently fenced retirement batches.
+`NpcRetirementRequestV1` carries a request ID, owner instance and up to 256 unique
+NPC IDs with their current ownership versions and a terminal reason. A successful
+retirement increments the fence and preserves the ID permanently. Pending
+transfers prohibit retirement. Repeat the exact request ID/payload after uncertain
+delivery; reusing the ID with another payload is rejected. Responses report each
+entry separately, so a stale entry does not block unrelated valid entries.
+`NpcOwnershipLease.IsRetired` is appended at key 4; older four-field leases decode
+as active. Older consumers cannot safely reuse retired allocation results and must
+negotiate retirement support before enabling this lifecycle path.

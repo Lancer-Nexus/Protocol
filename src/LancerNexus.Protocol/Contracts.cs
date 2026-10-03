@@ -268,6 +268,7 @@ public sealed class NpcOwnershipLease
     [Key(1)] public string InstanceId { get; init; } = "";
     [Key(2)] public long OwnershipVersion { get; init; }
     [Key(3)] public Guid? ActiveTransferId { get; init; }
+    [Key(4)] public bool IsRetired { get; init; }
 }
 
 /// <summary>
