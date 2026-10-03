@@ -58,6 +58,10 @@ to groups whose complete NPC lease set remains active on the target instance.
 
 ## Development
 
+The reusable [NPC transfer diagnostics tool](tools/NpcTransferDiagnostics/README.md)
+inspects stored runtime snapshots and probes the private QUIC/mTLS handshake without
+changing NPC leases or transfer journals.
+
 ```bash
 dotnet restore tests/LancerNexus.Protocol.Tests/LancerNexus.Protocol.Tests.csproj
 dotnet build tests/LancerNexus.Protocol.Tests/LancerNexus.Protocol.Tests.csproj --configuration Release --no-restore --warnaserror
