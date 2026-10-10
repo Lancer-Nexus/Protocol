@@ -132,6 +132,68 @@ public sealed class EventContractsTests
         Assert.False((export with { Participants = [export.Participants[0] with { EventPoints = -1 }] }).IsValid());
     }
 
+    [Fact]
+    public void EventServerReservationAndReleaseAreExplicitAndIdempotentContracts()
+    {
+        var request = new EventServerReservationRequestV1
+        {
+            RequestId = Guid.NewGuid(),
+            CorrelationId = Guid.NewGuid(),
+            EventId = "battle-01",
+            EventRevision = 3,
+            TargetSystemId = "li01",
+            MaximumParticipants = 64,
+            StartsUtc = DateTimeOffset.Parse("2026-11-02T13:00:00Z"),
+            EndsUtc = DateTimeOffset.Parse("2026-11-02T15:00:00Z"),
+            IdempotencyKey = "battle-01-server"
+        };
+        Assert.True(request.IsValid());
+        Assert.False((request with { MaximumParticipants = 201 }).IsValid());
+        Assert.False((request with { EndsUtc = request.StartsUtc }).IsValid());
+        Assert.Equal(10, new MessagePackReader(MessagePackSerializer.Serialize(request)).ReadArrayHeader());
+
+        var reservation = new EventServerReservationDecisionV1
+        {
+            RequestId = request.RequestId,
+            CorrelationId = request.CorrelationId,
+            EventId = request.EventId,
+            ReservationId = Guid.NewGuid(),
+            Status = EventServerReservationStatus.Reserved,
+            InstanceId = "li-event-01",
+            SystemId = "li01",
+            Endpoint = "quic://li-event-01:7443",
+            ReservedCapacity = 64
+        };
+        Assert.True(reservation.IsValid());
+        Assert.Equal(reservation,
+            MessagePackSerializer.Deserialize<EventServerReservationDecisionV1>(
+                MessagePackSerializer.Serialize(reservation)));
+        Assert.False((reservation with { Endpoint = null }).IsValid());
+
+        var release = new EventServerReservationReleaseRequestV1
+        {
+            RequestId = Guid.NewGuid(),
+            CorrelationId = Guid.NewGuid(),
+            EventId = request.EventId,
+            ReservationId = reservation.ReservationId!.Value,
+            IdempotencyKey = "battle-01-release",
+            ReasonCode = "event_closed"
+        };
+        Assert.True(release.IsValid());
+        Assert.Equal(7, new MessagePackReader(MessagePackSerializer.Serialize(release)).ReadArrayHeader());
+
+        var released = new EventServerReservationReleaseDecisionV1
+        {
+            RequestId = release.RequestId,
+            CorrelationId = release.CorrelationId,
+            EventId = release.EventId,
+            ReservationId = release.ReservationId,
+            Status = EventServerReservationReleaseStatus.Released
+        };
+        Assert.True(released.IsValid());
+        Assert.False((released with { ReservationId = null }).IsValid());
+    }
+
     private static NexusEventDefinitionV1 Definition() => new()
     {
         EventId = "battle-01",

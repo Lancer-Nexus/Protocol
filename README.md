@@ -152,3 +152,10 @@ Gateway attestation, authenticated service identity, durable idempotency, SQL re
 validation and audit remain service responsibilities. Event service implementation,
 Coordinator capacity reservation, reward policy and end-to-end return transfer remain
 open.
+
+`EventServerReservationRequestV1` and `EventServerReservationReleaseRequestV1` define
+the authenticated Coordinator boundary for holding one ready instance's capacity for
+an event's system, participant limit and scheduled window. Reservation decisions bind
+the event to one instance and return a stable reservation ID; release decisions are
+idempotent and require the matching event/reservation pair. These contracts do not
+implement Coordinator persistence or lifecycle calls from Events.
