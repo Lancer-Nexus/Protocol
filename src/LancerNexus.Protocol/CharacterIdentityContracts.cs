@@ -26,8 +26,10 @@ public sealed record CharacterIdentityResolveResultV1
     [Key(2)] public bool Accepted { get; init; }
     [Key(3)] public string ReasonCode { get; init; } = "";
     [Key(4)] public long? CharacterId { get; init; }
+    [Key(5)] public string? LeaseTicket { get; init; }
 
     public bool IsValid() => SchemaVersion == 1 && CorrelationId != Guid.Empty &&
         AdminQuery.ValidIdentifier(ReasonCode) &&
-        (Accepted ? ReasonCode == "resolved" && CharacterId is > 0 : CharacterId is null);
+        (Accepted ? ReasonCode == "resolved" && CharacterId is > 0 && !string.IsNullOrWhiteSpace(LeaseTicket)
+            : CharacterId is null && LeaseTicket is null);
 }

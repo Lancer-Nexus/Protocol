@@ -19,7 +19,8 @@ public sealed class CharacterIdentityContractsTests
         };
         var result = new CharacterIdentityResolveResultV1
         {
-            CorrelationId = request.CorrelationId, Accepted = true, ReasonCode = "resolved", CharacterId = 918
+            CorrelationId = request.CorrelationId, Accepted = true, ReasonCode = "resolved", CharacterId = 918,
+            LeaseTicket = "signed-ticket"
         };
 
         Assert.True(request.IsValid());
