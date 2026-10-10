@@ -28,7 +28,8 @@ public enum ClusterMessageType : ushort
     PermissionRevisionAcknowledged = 301,
     FlHookEvent = 302,
     FlHookEventReplayRequest = 303,
-    FlHookEventReplayResult = 304
+    FlHookEventReplayResult = 304,
+    FlHookEventIngestResult = 305
 }
 
 public static class ClusterCapabilities

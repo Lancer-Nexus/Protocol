@@ -12,6 +12,38 @@ public enum FlHookEventKind
     CharacterDisconnected = 5
 }
 
+/// <summary>Outcome of attempting durable, idempotent ingestion of a hook event.</summary>
+public enum FlHookEventIngestStatusV1 : byte
+{
+    Stored = 1,
+    Duplicate = 2,
+    Conflict = 3,
+    Rejected = 4,
+    Unavailable = 5
+}
+
+/// <summary>
+/// Acknowledges one event identity. Stored and Duplicate permit the producer to advance;
+/// Unavailable is retryable, while Conflict and Rejected require operator or producer action.
+/// </summary>
+[MessagePackObject]
+public sealed record FlHookEventIngestResultV1
+{
+    [Key(0)] public int SchemaVersion { get; init; } = 1;
+    [Key(1)] public Guid CorrelationId { get; init; }
+    [Key(2)] public string InstanceId { get; init; } = "";
+    [Key(3)] public Guid ProducerEpoch { get; init; }
+    [Key(4)] public long Sequence { get; init; }
+    [Key(5)] public FlHookEventIngestStatusV1 Status { get; init; }
+
+    [IgnoreMember]
+    public bool IsDurablyAccepted => Status is FlHookEventIngestStatusV1.Stored or FlHookEventIngestStatusV1.Duplicate;
+
+    public bool IsValid() => SchemaVersion == 1 && CorrelationId != Guid.Empty &&
+        AdminQuery.ValidIdentifier(InstanceId) && ProducerEpoch != Guid.Empty && Sequence > 0 &&
+        Enum.IsDefined(Status);
+}
+
 /// <summary>
 /// Versioned event emitted by one game instance. Sequence is strictly increasing per instance;
 /// consumers must detect gaps and request replay before assuming a complete history.

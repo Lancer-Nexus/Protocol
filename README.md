@@ -159,3 +159,14 @@ an event's system, participant limit and scheduled window. Reservation decisions
 the event to one instance and return a stable reservation ID; release decisions are
 idempotent and require the matching event/reservation pair. These contracts do not
 implement Coordinator persistence or lifecycle calls from Events.
+
+## FLHook durable ingestion acknowledgement
+
+`FlHookEventIngestResultV1` (message type 305) acknowledges the
+`(InstanceId, ProducerEpoch, Sequence)` identity. `Stored` and `Duplicate` mean
+that the receiver durably recorded the event and the producer may advance.
+`Unavailable` is retryable with the same identity and payload. `Conflict` means
+that identity was already recorded with different content; `Rejected` is
+permanent input rejection. This is only the wire contract: a service must not
+advertise `flhook_events_v1` as ready until it implements durable deduplication
+and these outcomes.

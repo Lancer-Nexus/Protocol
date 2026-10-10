@@ -11,7 +11,47 @@ public sealed class FlHookEventContractsTests
         Assert.Equal((ushort)302, (ushort)ClusterMessageType.FlHookEvent);
         Assert.Equal((ushort)303, (ushort)ClusterMessageType.FlHookEventReplayRequest);
         Assert.Equal((ushort)304, (ushort)ClusterMessageType.FlHookEventReplayResult);
+        Assert.Equal((ushort)305, (ushort)ClusterMessageType.FlHookEventIngestResult);
         Assert.Equal("flhook_events_v1", ClusterCapabilities.FlHookEventsV1);
+    }
+
+    [Theory]
+    [InlineData(FlHookEventIngestStatusV1.Stored, true)]
+    [InlineData(FlHookEventIngestStatusV1.Duplicate, true)]
+    [InlineData(FlHookEventIngestStatusV1.Conflict, false)]
+    [InlineData(FlHookEventIngestStatusV1.Rejected, false)]
+    [InlineData(FlHookEventIngestStatusV1.Unavailable, false)]
+    public void IngestResultRoundTripsAndOnlyDurableOutcomesAdvanceProducer(FlHookEventIngestStatusV1 status, bool accepted)
+    {
+        var result = new FlHookEventIngestResultV1
+        {
+            CorrelationId = Guid.NewGuid(),
+            InstanceId = "li-01",
+            ProducerEpoch = Guid.NewGuid(),
+            Sequence = 42,
+            Status = status
+        };
+
+        Assert.True(result.IsValid());
+        var bytes = MessagePackSerializer.Serialize(result);
+        var decoded = MessagePackSerializer.Deserialize<FlHookEventIngestResultV1>(bytes);
+        Assert.Equal(result, decoded);
+        Assert.Equal(6, new MessagePackReader(bytes).ReadArrayHeader());
+        Assert.Equal(accepted, decoded.IsDurablyAccepted);
+    }
+
+    [Fact]
+    public void IngestResultRejectsInvalidIdentityAndUnknownStatus()
+    {
+        var valid = new FlHookEventIngestResultV1
+        {
+            CorrelationId = Guid.NewGuid(), InstanceId = "li-01", ProducerEpoch = Guid.NewGuid(),
+            Sequence = 1, Status = FlHookEventIngestStatusV1.Stored
+        };
+
+        Assert.False((valid with { ProducerEpoch = Guid.Empty }).IsValid());
+        Assert.False((valid with { Sequence = 0 }).IsValid());
+        Assert.False((valid with { Status = (FlHookEventIngestStatusV1)99 }).IsValid());
     }
 
     [Fact]
