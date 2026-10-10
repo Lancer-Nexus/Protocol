@@ -2,6 +2,8 @@
 
 AdminContracts defines bounded read-only AdminQuery commands (help/status/instances/instance), admitted GameAdminQueryRequest, Gateway-attested AuthorizedAdminQueryRequest and private AdminQueryResponse. AdminActionContracts adds typed MessagePack contracts for message, kick, ban, unban, drain, move, teleport and transfer requests plus correlated results. These mutation contracts are a wire foundation only: Gateway identity attestation, current permission/scope checks, confirmation validation, idempotent execution, presence resolution and durable audit remain service responsibilities. Explicit keys and closed enums prevent arbitrary command text from crossing service boundaries. Structural validation does not authorize an actor or prove the target's current state.
 
+`FlHookEventV1` defines a closed set of player lifecycle/system-change events with per-instance monotonic sequence numbers and UTC timestamps. `FlHookEventReplayRequestV1` bounds replay requests to 500 events; `FlHookEventReplayResultV1` includes the requested cursor and validates ordering, instance identity and whether retained history has a gap. An empty history has an empty sequence range. A gap requires consumers to reconcile against an authoritative snapshot. These contracts do not provide event production, durable retention, transport or game-state authority.
+
 This repository contains versioned contracts for communication between the Lancer Nexus Client, Gateway, Coordinator, Agents and game instances.
 
 ## Protocol basis
@@ -134,3 +136,19 @@ These contracts are implemented and tested. Coordinator storage/endpoints,
 Gateway character-authority arbitration, stable mission runtime identity and
 GameServer checkpoint scheduling/recovery are not yet implemented. Do not advertise
 the capability or connect terminal hooks until those paths are available.
+
+## Event lifecycle contract foundation
+
+`EventContracts.cs` defines the version-1 event definition, individual registration,
+optimistic/idempotent lifecycle transition and frozen result-export messages. The
+phase graph follows `planned -> registration -> provisioning -> ready -> locked ->
+running -> result_export -> closed`, with cancellation before running and failure
+recovery transitions before closure. Registration binds account, session, character
+and current lease version; receiving services still re-check current identity,
+eligibility, event capacity and event-instance assignment. Result exports contain
+only bounded event points and battle counters, never normal credits or inventory.
+Structural validation does not authorize actors or prove an event server's result;
+Gateway attestation, authenticated service identity, durable idempotency, SQL result
+validation and audit remain service responsibilities. Event service implementation,
+Coordinator capacity reservation, reward policy and end-to-end return transfer remain
+open.
