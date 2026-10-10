@@ -25,7 +25,10 @@ public enum ClusterMessageType : ushort
     AgentHeartbeatResponse = 202,
     InstanceHeartbeatResponse = 203,
     PermissionRevisionChanged = 300,
-    PermissionRevisionAcknowledged = 301
+    PermissionRevisionAcknowledged = 301,
+    FlHookEvent = 302,
+    FlHookEventReplayRequest = 303,
+    FlHookEventReplayResult = 304
 }
 
 public static class ClusterCapabilities
@@ -34,6 +37,7 @@ public static class ClusterCapabilities
     public const string NpcOwnershipV1 = "npc_ownership_v1";
     public const string NpcRetirementV1 = "npc_retirement_v1";
     public const string NpcTransferV1 = "npc_transfer_v1";
+    public const string FlHookEventsV1 = "flhook_events_v1";
 }
 
 [Flags]
