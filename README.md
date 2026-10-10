@@ -1,6 +1,6 @@
 # Lancer Nexus Protocol
 
-AdminContracts defines bounded read-only AdminQuery commands (help/status/instances/instance), admitted GameAdminQueryRequest, Gateway-attested AuthorizedAdminQueryRequest and private AdminQueryResponse. Explicit MessagePack keys and a closed enum prevent executable text from crossing service boundaries. Parsers reject unknown commands, extra arguments and invalid identifiers. New contracts do not renumber existing messages. Responses carry correlation and outcome; queries carry account-scoped idempotency keys. Repeated queries must use current authorization and fresh status, not cached privileges.
+AdminContracts defines bounded read-only AdminQuery commands (help/status/instances/instance), admitted GameAdminQueryRequest, Gateway-attested AuthorizedAdminQueryRequest and private AdminQueryResponse. AdminActionContracts adds typed MessagePack contracts for message, kick, ban, unban, drain, move, teleport and transfer requests plus correlated results. These mutation contracts are a wire foundation only: Gateway identity attestation, current permission/scope checks, confirmation validation, idempotent execution, presence resolution and durable audit remain service responsibilities. Explicit keys and closed enums prevent arbitrary command text from crossing service boundaries. Structural validation does not authorize an actor or prove the target's current state.
 
 This repository contains versioned contracts for communication between the Lancer Nexus Client, Gateway, Coordinator, Agents and game instances.
 

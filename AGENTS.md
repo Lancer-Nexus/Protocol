@@ -31,6 +31,8 @@ Maintain stable, explicit and interoperable contracts for the cluster.
 
 AdminQuery is a closed read-only wire contract with explicit MessagePack keys, correlation and account-scoped idempotency identifiers. Reject unknown kinds, malformed identifiers and extra chat arguments; never carry executable raw admin text. Admission identity is attested by Gateway and does not itself grant administrator rights. Repeated queries require current authorization and fresh status in the consuming service.
 
+AdminActionRequestV1 is a separate closed, typed mutation contract. Its structural validation does not attest the actor or authorize the action: Gateway must attest identity, and the consuming service must re-check current SQL permission, scope, confirmation, presence and idempotency before dispatch. Keep action execution and durable audit in services.
+
 Maintain golden-message tests, compatibility tests for the previous protocol version and negative tests for malformed or replayed messages.
 
 ## Nexus baseline system groups
