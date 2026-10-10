@@ -30,13 +30,21 @@ public sealed class AdminQuery
         var kind = parts.Length == 1 ? "help" : parts[1].ToLowerInvariant();
         AdminQueryKind? parsed = kind switch
         {
-            "help" => AdminQueryKind.Help, "status" => AdminQueryKind.Status,
-            "instances" => AdminQueryKind.Instances, "instance" => AdminQueryKind.Instance, _ => null
+            "help" => AdminQueryKind.Help,
+            "status" => AdminQueryKind.Status,
+            "instances" => AdminQueryKind.Instances,
+            "instance" => AdminQueryKind.Instance,
+            _ => null
         };
         if (parsed is null || (parsed == AdminQueryKind.Instance ? parts.Length != 3 : parts.Length > 2)) return null;
         var id = Guid.NewGuid();
-        var query = new AdminQuery { CorrelationId = id, IdempotencyKey = id.ToString("N"),
-            Kind = parsed.Value, TargetInstanceId = parsed == AdminQueryKind.Instance ? parts[2] : null };
+        var query = new AdminQuery
+        {
+            CorrelationId = id,
+            IdempotencyKey = id.ToString("N"),
+            Kind = parsed.Value,
+            TargetInstanceId = parsed == AdminQueryKind.Instance ? parts[2] : null
+        };
         return query.IsValid() ? query : null;
     }
 }
