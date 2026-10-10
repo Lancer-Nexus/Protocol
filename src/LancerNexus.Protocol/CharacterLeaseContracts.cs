@@ -22,7 +22,7 @@ public sealed record CharacterLeaseAcquireRequestV1
     public bool IsValid() => SchemaVersion == 1 && CorrelationId != Guid.Empty &&
         JoinTicket is { Length: > 0 and <= 16_384 } && IsLeaseToken(LeaseToken) && CharacterId > 0;
 
-    private static bool IsLeaseToken(string? value)
+    internal static bool IsLeaseToken(string? value)
     {
         if (value is not { Length: 43 } || value.Any(character =>
                 !char.IsAsciiLetterOrDigit(character) && character is not ('-' or '_'))) return false;
@@ -47,4 +47,34 @@ public sealed record CharacterLeaseAcquireResultV1
         (Accepted
             ? LeaseVersion is > 0 && ValidUntilUtc is { Offset: var offset } && offset == TimeSpan.Zero
             : LeaseVersion is null && ValidUntilUtc is null);
+}
+
+/// <summary>Releases the caller's current character lease after final state is persisted.</summary>
+[MessagePackObject]
+public sealed record CharacterLeaseReleaseRequestV1
+{
+    [Key(0)] public int SchemaVersion { get; init; } = 1;
+    [Key(1)] public Guid CorrelationId { get; init; }
+    [Key(2)] public long CharacterId { get; init; }
+    [Key(3)] public Guid SessionId { get; init; }
+    [Key(4)] public string LeaseToken { get; init; } = "";
+    [Key(5)] public long LeaseVersion { get; init; }
+
+    public bool IsValid() => SchemaVersion == 1 && CorrelationId != Guid.Empty && CharacterId > 0 &&
+        SessionId != Guid.Empty && CharacterLeaseAcquireRequestV1.IsLeaseToken(LeaseToken) && LeaseVersion > 0;
+}
+
+/// <summary>Outcome of releasing a lease with an exact session, token and fencing version.</summary>
+[MessagePackObject]
+public sealed record CharacterLeaseReleaseResultV1
+{
+    [Key(0)] public int SchemaVersion { get; init; } = 1;
+    [Key(1)] public Guid CorrelationId { get; init; }
+    [Key(2)] public bool Released { get; init; }
+    [Key(3)] public string ReasonCode { get; init; } = "";
+    [Key(4)] public long? LeaseVersion { get; init; }
+
+    public bool IsValid() => SchemaVersion == 1 && CorrelationId != Guid.Empty &&
+        AdminQuery.ValidIdentifier(ReasonCode) &&
+        (Released ? LeaseVersion is > 0 : LeaseVersion is null);
 }
