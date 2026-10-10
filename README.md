@@ -16,6 +16,8 @@ This repository contains versioned contracts for communication between the Lance
 
 The protocol defines envelopes, authentication metadata, registration, placement, leases, transfers, chat events and health messages. It does not contain service implementations.
 
+`CharacterRosterRequestV1` and `CharacterRosterResultV1` define the session-bound game-instance roster call. Results contain Gateway character IDs and exact display names, with tombstones omitted by the service. `CharacterDeletionRequestV1` and `CharacterDeletionResultV1` define the idempotent history-preserving deletion boundary; service implementations must reject live leases and staged transfers and retain the identity, lease, transfer and snapshot history. These contracts carry account/session identifiers for validation but do not authenticate the caller or authorize a deletion by themselves.
+
 ## NPC transfer contracts
 
 The optional `npc_transfer_v1` capability identifies peers that understand the
