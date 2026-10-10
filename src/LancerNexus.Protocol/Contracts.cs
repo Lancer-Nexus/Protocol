@@ -383,6 +383,22 @@ public sealed class NpcAiState
 }
 
 [MessagePackObject]
+public sealed class NpcAutoTurretTransferStateV1
+{
+    [Key(0)] public float BurstTimer { get; init; }
+    [Key(1)] public float FireTimer { get; init; }
+    [Key(2)] public bool InBurst { get; init; }
+    [Key(3)] public ulong RandomState { get; init; }
+
+    public void Validate()
+    {
+        if (!float.IsFinite(BurstTimer) || BurstTimer < 0 || BurstTimer > 600 ||
+            !float.IsFinite(FireTimer) || FireTimer < 0 || FireTimer > 600 || RandomState == 0)
+            throw new System.IO.InvalidDataException("Invalid NPC auto-turret transfer state");
+    }
+}
+
+[MessagePackObject]
 public sealed class NpcTransferSnapshot
 {
     [Key(0)] public Guid TransferId { get; init; }
