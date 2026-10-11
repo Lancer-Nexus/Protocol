@@ -144,6 +144,40 @@ public sealed class MarketContractsTests
         Assert.Equal(request.CharacterId, quoteRequest.CharacterId);
         Assert.Equal(request.ExpectedMarketRevision, quoteRequest.ExpectedMarketRevision);
         Assert.Equal(9, quoteRequest.ExpectedReputationRevision);
+
+        var quote = new MarketQuoteResponseV1
+        {
+            CorrelationId = request.CorrelationId,
+            CharacterId = request.CharacterId,
+            SystemId = request.SystemId,
+            MarketId = request.MarketId,
+            GoodId = request.GoodId,
+            Side = request.Side,
+            Quantity = request.Quantity,
+            Status = MarketQuoteStatusV1.Quoted,
+            MarketRevision = 7,
+            ReputationRevision = 9,
+            MarketFactionId = "li_grp",
+            AppliedReputation = 0.5f,
+            ReputationFactorPartsPerMillion = 950_000,
+            QuoteUnitPrice = 95,
+            TotalPrice = 190,
+            ExpiresUtc = DateTimeOffset.UtcNow.AddSeconds(15),
+            PricingPolicyVersion = 1
+        };
+        var response = new MarketTradeQuoteReadResponseV1
+        {
+            CorrelationId = request.CorrelationId,
+            CharacterId = request.CharacterId,
+            LeaseVersion = request.LeaseVersion,
+            ExpectedReputationRevision = 9,
+            Quote = quote
+        };
+        Assert.True(response.IsValidFor(request));
+        Assert.Equal(response, MessagePackSerializer.Deserialize<MarketTradeQuoteReadResponseV1>(
+            MessagePackSerializer.Serialize(response)));
+        Assert.False(response.IsValidFor(request with { LeaseVersion = 4 }));
+        Assert.False((response with { ExpectedReputationRevision = 10 }).IsValidFor(request));
     }
 
     [Fact]

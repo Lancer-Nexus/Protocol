@@ -49,6 +49,24 @@ public sealed record MarketTradeQuoteReadRequestV1
     };
 }
 
+/// <summary>Returns a quote bound to the current instance lease and Gateway snapshot revision.</summary>
+[MessagePackObject]
+public sealed record MarketTradeQuoteReadResponseV1
+{
+    [Key(0)] public int SchemaVersion { get; init; } = 1;
+    [Key(1)] public Guid CorrelationId { get; init; }
+    [Key(2)] public long CharacterId { get; init; }
+    [Key(3)] public long LeaseVersion { get; init; }
+    [Key(4)] public long ExpectedReputationRevision { get; init; }
+    [Key(5)] public MarketQuoteResponseV1? Quote { get; init; }
+
+    public bool IsValidFor(MarketTradeQuoteReadRequestV1 request) =>
+        request is not null && request.IsValid() && SchemaVersion == 1 &&
+        CorrelationId == request.CorrelationId && CharacterId == request.CharacterId &&
+        LeaseVersion == request.LeaseVersion && ExpectedReputationRevision > 0 &&
+        Quote is not null && Quote.IsValidFor(request.ToMarketQuoteRequest(ExpectedReputationRevision));
+}
+
 /// <summary>
 /// Requests a character-bound market price preview. The Coordinator obtains reputation
 /// from Gateway using the expected snapshot revision; callers never submit reputation values.
