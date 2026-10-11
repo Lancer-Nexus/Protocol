@@ -140,7 +140,8 @@ public sealed class MarketTradeReservationContractsTests
         Assert.True(request.IsValid());
         Assert.True(response.IsValid());
         Assert.True(response.Matches(request));
-        Assert.Equal(request, RoundTrip(request));
+        Assert.Equal(Convert.ToHexString(MessagePackSerializer.Serialize(request)),
+            Convert.ToHexString(MessagePackSerializer.Serialize(RoundTrip(request))));
         Assert.Equal(response, RoundTrip(response));
         Assert.Equal(15, ArrayLength(request));
         Assert.Equal(11, ArrayLength(response));
@@ -150,19 +151,85 @@ public sealed class MarketTradeReservationContractsTests
         var staleReputation = response with
         {
             Status = MarketTradeReservationStatusV1.ReputationRevisionMismatch,
-            QuoteUnitPrice = 0, TotalPrice = 0, MarketRevision = 0, SystemRevision = 0,
-            ReputationRevision = 9, ReputationPriceFactorPartsPerMillion = 0, MarketFactionId = null
+            QuoteUnitPrice = 0,
+            TotalPrice = 0,
+            MarketRevision = 0,
+            SystemRevision = 0,
+            ReputationRevision = 9,
+            ReputationPriceFactorPartsPerMillion = 0,
+            MarketFactionId = null
         };
         var staleMarket = response with
         {
             Status = MarketTradeReservationStatusV1.MarketRevisionMismatch,
-            QuoteUnitPrice = 0, TotalPrice = 0, MarketRevision = 15, SystemRevision = 0,
-            ReputationRevision = 0, ReputationPriceFactorPartsPerMillion = 0, MarketFactionId = null
+            QuoteUnitPrice = 0,
+            TotalPrice = 0,
+            MarketRevision = 15,
+            SystemRevision = 0,
+            ReputationRevision = 0,
+            ReputationPriceFactorPartsPerMillion = 0,
+            MarketFactionId = null
         };
         Assert.True(staleReputation.IsValid());
         Assert.True(staleReputation.Matches(request));
         Assert.True(staleMarket.IsValid());
         Assert.True(staleMarket.Matches(request));
+    }
+
+    [Fact]
+    public void MarketTradeCommitBindsQuoteReservationToFencedSnapshot()
+    {
+        var tradeId = Guid.NewGuid();
+        var reservation = new MarketTradeQuoteReservationRequestV1
+        {
+            CorrelationId = Guid.NewGuid(),
+            TradeId = tradeId,
+            MarketId = "li01_01_base",
+            SystemId = "li01",
+            GoodId = "commodity_food",
+            Side = MarketTradeSideV1.Buy,
+            Quantity = 2,
+            ExpectedMarketRevision = 5,
+            ExpectedReputationRevision = 7,
+            ReputationPriceFactorPartsPerMillion = 1_000_000,
+            ExpectedQuoteUnitPrice = 100,
+            ExpectedTotalPrice = 201,
+            CharacterId = 42,
+            MarketFactionId = "li_grp"
+        };
+        var request = new MarketTradeCommitRequestV1
+        {
+            CorrelationId = Guid.NewGuid(),
+            TradeId = tradeId,
+            Reservation = reservation,
+            Snapshot = new CharacterSaveSnapshotWriteRequestV1
+            {
+                CorrelationId = Guid.NewGuid(),
+                CharacterId = 42,
+                LeaseToken = new string('A', 43),
+                LeaseVersion = 3,
+                Revision = 9,
+                Payload = [1, 2, 3]
+            }
+        };
+        var response = new MarketTradeCommitResponseV1
+        {
+            CorrelationId = request.CorrelationId,
+            TradeId = tradeId,
+            Status = MarketTradeCommitStatusV1.Committed,
+            SnapshotRevision = 9
+        };
+
+        Assert.True(request.IsValid());
+        Assert.True(response.IsValidFor(request));
+        Assert.Equal(Convert.ToHexString(MessagePackSerializer.Serialize(request)),
+            Convert.ToHexString(MessagePackSerializer.Serialize(RoundTrip(request))));
+        Assert.Equal(5, ArrayLength(request));
+        Assert.False((request with { TradeId = Guid.NewGuid() }).IsValid());
+        Assert.False((request with { Snapshot = request.Snapshot with { CharacterId = 43 } }).IsValid());
+        Assert.False((response with { SnapshotRevision = 8 }).IsValidFor(request));
+        Assert.False((response with { Status = MarketTradeCommitStatusV1.Pending, SnapshotRevision = 9 })
+            .IsValidFor(request));
     }
 
     private static T RoundTrip<T>(T value) =>
