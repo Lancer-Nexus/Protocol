@@ -17,7 +17,57 @@ public sealed class MarketContractsTests
         Assert.Equal((ushort)321, (ushort)ClusterMessageType.MarketCatalogReadResponse);
         Assert.Equal((ushort)322, (ushort)ClusterMessageType.MarketQuoteRequest);
         Assert.Equal((ushort)323, (ushort)ClusterMessageType.MarketQuoteResponse);
+        Assert.Equal((ushort)324, (ushort)ClusterMessageType.MarketGoodReadRequest);
+        Assert.Equal((ushort)325, (ushort)ClusterMessageType.MarketGoodReadResponse);
         Assert.Equal("dynamic_market_v1", ClusterCapabilities.DynamicMarketV1);
+    }
+
+    [Fact]
+    public void MarketGoodReadContractsBindTheExactLocationAndBothRevisions()
+    {
+        var request = new MarketGoodReadRequestV1
+        {
+            CorrelationId = Guid.NewGuid(), SystemId = "li01", MarketId = "li01_01_base",
+            GoodId = "commodity_food", ExpectedSystemRevision = 12, ExpectedMarketRevision = 8
+        };
+        var good = Good(request.MarketId, request.GoodId) with { MarketRevision = 8 };
+        var response = new MarketGoodReadResponseV1
+        {
+            CorrelationId = request.CorrelationId, SystemId = request.SystemId,
+            MarketId = request.MarketId, GoodId = request.GoodId,
+            Status = MarketGoodReadStatusV1.Found, SystemRevision = 12,
+            MarketRevision = 8, Good = good
+        };
+
+        Assert.True(request.IsValid());
+        Assert.True(response.IsValidFor(request));
+        Assert.Equal(request, MessagePackSerializer.Deserialize<MarketGoodReadRequestV1>(
+            MessagePackSerializer.Serialize(request)));
+        Assert.False(response.IsValidFor(request with { MarketId = "li01_02_base" }));
+        Assert.False(response.IsValidFor(request with { ExpectedSystemRevision = 13 }));
+        Assert.False((response with { Good = good with { MarketRevision = 9 } }).IsValidFor(request));
+        Assert.False((request with { GoodId = "COMMODITY_FOOD" }).IsValid());
+    }
+
+    [Fact]
+    public void MarketGoodReadRevisionMismatchAndNotFoundResponsesAreExplicit()
+    {
+        var request = new MarketGoodReadRequestV1
+        {
+            CorrelationId = Guid.NewGuid(), SystemId = "li01", MarketId = "li01_01_base",
+            GoodId = "commodity_food", ExpectedSystemRevision = 12
+        };
+        var mismatch = new MarketGoodReadResponseV1
+        {
+            CorrelationId = request.CorrelationId, SystemId = request.SystemId,
+            MarketId = request.MarketId, GoodId = request.GoodId,
+            Status = MarketGoodReadStatusV1.RevisionMismatch, SystemRevision = 13
+        };
+        var missing = mismatch with { Status = MarketGoodReadStatusV1.NotFound, SystemRevision = 12 };
+
+        Assert.True(mismatch.IsValidFor(request));
+        Assert.True(missing.IsValidFor(request));
+        Assert.False((missing with { SystemRevision = 0 }).IsValidFor(request));
     }
 
     [Fact]

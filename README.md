@@ -18,6 +18,8 @@ AdminContracts defines bounded read-only AdminQuery commands (help/status/instan
 
 `MarketQuoteRequestV1` binds a bounded price preview to character, market, good, side, quantity and expected reputation revision; an optional expected market revision detects stale market state. The Coordinator obtains reputation from Gateway and never accepts client-supplied faction values. `MarketQuoteResponseV1` returns the exact faction/reputation used, factor, pricing policy version, marginal quantity total, both revisions and UTC expiry. It is a preview only and reserves no stock or credits. Message IDs 322–323 identify the pair.
 
+`MarketGoodReadRequestV1` reads one exact `(systemId, marketId, goodId)` row and can pin both system and market revisions. Its response distinguishes a missing offer from unavailable storage and stale revisions; a found row must match all requested identifiers and the reported market revision. Message IDs 324–325 identify the pair. This read contract does not grant trade authority.
+
 This repository contains versioned contracts for communication between the Lancer Nexus Client, Gateway, Coordinator, Agents and game instances.
 
 ## Protocol basis
