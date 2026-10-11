@@ -16,6 +16,8 @@ AdminContracts defines bounded read-only AdminQuery commands (help/status/instan
 
 `MarketCatalogReadRequestV1` and `MarketCatalogReadResponseV1` provide bounded, keyset-paginated reads of every seeded good, including goods with no active offer. The immutable seed SHA-256 is the catalog revision; continuation requests must pin it and receive `RevisionExpired` if it changes. Message IDs 320–321 identify the pair.
 
+`MarketQuoteRequestV1` binds a bounded price preview to character, market, good, side, quantity and expected reputation revision; an optional expected market revision detects stale market state. The Coordinator obtains reputation from Gateway and never accepts client-supplied faction values. `MarketQuoteResponseV1` returns the exact faction/reputation used, factor, marginal quantity total, both revisions and UTC expiry. It is a preview only and reserves no stock or credits. Message IDs 322–323 identify the pair.
+
 This repository contains versioned contracts for communication between the Lancer Nexus Client, Gateway, Coordinator, Agents and game instances.
 
 ## Protocol basis

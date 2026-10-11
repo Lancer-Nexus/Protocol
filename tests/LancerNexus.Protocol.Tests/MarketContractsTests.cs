@@ -15,7 +15,51 @@ public sealed class MarketContractsTests
         Assert.Equal((ushort)313, (ushort)ClusterMessageType.MarketTradeEventAcknowledgement);
         Assert.Equal((ushort)320, (ushort)ClusterMessageType.MarketCatalogReadRequest);
         Assert.Equal((ushort)321, (ushort)ClusterMessageType.MarketCatalogReadResponse);
+        Assert.Equal((ushort)322, (ushort)ClusterMessageType.MarketQuoteRequest);
+        Assert.Equal((ushort)323, (ushort)ClusterMessageType.MarketQuoteResponse);
         Assert.Equal("dynamic_market_v1", ClusterCapabilities.DynamicMarketV1);
+    }
+
+    [Fact]
+    public void MarketQuoteContractsBindIdentityRevisionsAndNeverCarryReputationInRequest()
+    {
+        var request = new MarketQuoteRequestV1
+        {
+            CorrelationId = Guid.NewGuid(),
+            CharacterId = 42,
+            SystemId = "li-01",
+            MarketId = "li01_base",
+            GoodId = "commodity_food",
+            Side = MarketTradeSideV1.Buy,
+            Quantity = 3,
+            ExpectedMarketRevision = 7,
+            ExpectedReputationRevision = 9
+        };
+        var response = new MarketQuoteResponseV1
+        {
+            CorrelationId = request.CorrelationId,
+            CharacterId = request.CharacterId,
+            SystemId = request.SystemId,
+            MarketId = request.MarketId,
+            GoodId = request.GoodId,
+            Side = request.Side,
+            Quantity = request.Quantity,
+            Status = MarketQuoteStatusV1.Quoted,
+            MarketRevision = 7,
+            ReputationRevision = 9,
+            MarketFactionId = "li_grp",
+            AppliedReputation = 0.5f,
+            ReputationFactorPartsPerMillion = 950_000,
+            QuoteUnitPrice = 95,
+            TotalPrice = 285,
+            ExpiresUtc = DateTimeOffset.UtcNow.AddSeconds(15)
+        };
+        Assert.True(request.IsValid());
+        Assert.True(response.IsValidFor(request));
+        Assert.False(response.IsValidFor(request with { CharacterId = 43 }));
+        Assert.False(response.IsValidFor(request with { ExpectedReputationRevision = 10 }));
+        Assert.False((request with { Quantity = MarketTradeEventV1.MaximumQuantity + 1 }).IsValid());
+        Assert.False((response with { ReputationFactorPartsPerMillion = 500_000 }).IsValidFor(request));
     }
 
     [Fact]
