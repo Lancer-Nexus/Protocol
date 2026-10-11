@@ -191,8 +191,8 @@ public sealed record MarketTradeReservationResponseV1
 [MessagePackObject]
 public sealed record MarketTradeQuoteReservationRequestV1
 {
-    public const long MinimumPriceFactorPartsPerMillion = 750_000;
-    public const long MaximumPriceFactorPartsPerMillion = 1_250_000;
+    public const long MinimumPriceFactorPartsPerMillion = 900_000;
+    public const long MaximumPriceFactorPartsPerMillion = 1_100_000;
     public const long PartsPerMillion = 1_000_000;
 
     [Key(0)] public int SchemaVersion { get; init; } = 1;
