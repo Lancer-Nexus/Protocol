@@ -12,6 +12,8 @@ AdminContracts defines bounded read-only AdminQuery commands (help/status/instan
 
 `MarketTradeReservationRequestV1` binds one Gateway-generated `TradeId` to market, good, side, quantity and the expected market revision. Repeating the same trade payload is idempotent; reusing its ID with changed fields is a conflict at the service boundary. `MarketTradeResolutionRequestV1` commits or aborts that reservation. Responses distinguish `Reserved`, `Committed`, `Aborted`, `Conflict`, `Rejected` and retryable `Unavailable` and carry the stable quote amount and resulting revisions. Message IDs 314–317 identify the request/response pairs. These contracts do not authorize Gateway identity, apply reputation, or persist reservations; unresolved reservations must not expire solely by timeout while Gateway's durable decision is unknown.
 
+`MarketFactionReputationReadRequestV1` is an internal Coordinator-to-Gateway read bound to a character ID and optional expected SaveGame snapshot revision. A revision mismatch returns the current revision without faction values; the caller must fetch or rebuild its quote against that revision. Successful responses carry bounded values in the game's `[-1, 1]` range. Message IDs 318–319 identify this request/response pair. The contract does not define reputation discounts or authorize a trade.
+
 This repository contains versioned contracts for communication between the Lancer Nexus Client, Gateway, Coordinator, Agents and game instances.
 
 ## Protocol basis
