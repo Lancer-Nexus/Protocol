@@ -39,7 +39,9 @@ public enum ClusterMessageType : ushort
     MarketTradeResolutionRequest = 316,
     MarketTradeResolutionResponse = 317,
     MarketFactionReputationReadRequest = 318,
-    MarketFactionReputationReadResponse = 319
+    MarketFactionReputationReadResponse = 319,
+    MarketCatalogReadRequest = 320,
+    MarketCatalogReadResponse = 321
 }
 
 public static class ClusterCapabilities

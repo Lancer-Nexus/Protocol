@@ -16,6 +16,82 @@ public enum MarketSnapshotReadStatusV1 : byte
     Unavailable = 3
 }
 
+public enum MarketCatalogReadStatusV1 : byte
+{
+    Ok = 1,
+    RevisionExpired = 2,
+    Unavailable = 3
+}
+
+/// <summary>Reads a bounded page from the complete immutable market goods catalog.</summary>
+[MessagePackObject]
+public sealed record MarketCatalogReadRequestV1
+{
+    public const int MaximumPageSize = 500;
+
+    [Key(0)] public int SchemaVersion { get; init; } = 1;
+    [Key(1)] public Guid CorrelationId { get; init; }
+    [Key(2)] public string? AfterGoodId { get; init; }
+    [Key(3)] public string? ExpectedCatalogRevision { get; init; }
+    [Key(4)] public int PageSize { get; init; } = 100;
+
+    public bool IsValid() => SchemaVersion == 1 && CorrelationId != Guid.Empty &&
+        (AfterGoodId is null || MarketContractValidation.ValidId(AfterGoodId)) &&
+        (ExpectedCatalogRevision is null || IsRevision(ExpectedCatalogRevision)) &&
+        (AfterGoodId is null || ExpectedCatalogRevision is not null) &&
+        PageSize is >= 1 and <= MaximumPageSize;
+
+    internal static bool IsRevision(string value) => value.Length == 64 &&
+        value.All(character => character is >= '0' and <= '9' or >= 'a' and <= 'f');
+}
+
+[MessagePackObject]
+public sealed record MarketCatalogGoodV1
+{
+    [Key(0)] public string GoodId { get; init; } = "";
+    [Key(1)] public string Category { get; init; } = "";
+    [Key(2)] public long? BaseUnitPrice { get; init; }
+
+    public bool IsValid() => MarketContractValidation.ValidId(GoodId) &&
+        MarketContractValidation.ValidId(Category) && BaseUnitPrice is null or >= 0;
+}
+
+/// <summary>A page pinned to the immutable seed SHA-256 catalog revision.</summary>
+[MessagePackObject]
+public sealed record MarketCatalogReadResponseV1
+{
+    [Key(0)] public int SchemaVersion { get; init; } = 1;
+    [Key(1)] public Guid CorrelationId { get; init; }
+    [Key(2)] public MarketCatalogReadStatusV1 Status { get; init; }
+    [Key(3)] public string? CatalogRevision { get; init; }
+    [Key(4)] public MarketCatalogGoodV1[] Goods { get; init; } = [];
+    [Key(5)] public string? NextGoodId { get; init; }
+
+    public bool IsValidFor(MarketCatalogReadRequestV1 request)
+    {
+        if (request is null || !request.IsValid() || SchemaVersion != 1 ||
+            CorrelationId != request.CorrelationId || !Enum.IsDefined(Status) ||
+            Goods is null || Goods.Length > request.PageSize ||
+            (CatalogRevision is not null && !MarketCatalogReadRequestV1.IsRevision(CatalogRevision)) ||
+            (NextGoodId is not null && !MarketContractValidation.ValidId(NextGoodId)))
+            return false;
+        if (Status != MarketCatalogReadStatusV1.Ok)
+            return CatalogRevision is null && Goods.Length == 0 && NextGoodId is null;
+        if (CatalogRevision is null ||
+            (request.ExpectedCatalogRevision is not null && request.ExpectedCatalogRevision != CatalogRevision))
+            return false;
+        string? previous = request.AfterGoodId;
+        foreach (var good in Goods)
+        {
+            if (good is null || !good.IsValid() ||
+                (previous is not null && StringComparer.Ordinal.Compare(good.GoodId, previous) <= 0))
+                return false;
+            previous = good.GoodId;
+        }
+        return NextGoodId is null || (Goods.Length > 0 && NextGoodId == previous);
+    }
+}
+
 public enum MarketTradeSideV1 : byte
 {
     Buy = 1,

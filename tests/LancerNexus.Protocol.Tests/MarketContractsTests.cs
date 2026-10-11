@@ -13,7 +13,35 @@ public sealed class MarketContractsTests
         Assert.Equal((ushort)311, (ushort)ClusterMessageType.MarketSnapshotReadResponse);
         Assert.Equal((ushort)312, (ushort)ClusterMessageType.MarketTradeEvent);
         Assert.Equal((ushort)313, (ushort)ClusterMessageType.MarketTradeEventAcknowledgement);
+        Assert.Equal((ushort)320, (ushort)ClusterMessageType.MarketCatalogReadRequest);
+        Assert.Equal((ushort)321, (ushort)ClusterMessageType.MarketCatalogReadResponse);
         Assert.Equal("dynamic_market_v1", ClusterCapabilities.DynamicMarketV1);
+    }
+
+    [Fact]
+    public void CatalogReadContractsPinBoundedPagesToSeedRevision()
+    {
+        var revision = new string('a', 64);
+        var request = new MarketCatalogReadRequestV1 { CorrelationId = Guid.NewGuid(), PageSize = 1 };
+        var response = new MarketCatalogReadResponseV1
+        {
+            CorrelationId = request.CorrelationId,
+            Status = MarketCatalogReadStatusV1.Ok,
+            CatalogRevision = revision,
+            Goods = [new MarketCatalogGoodV1 { GoodId = "commodity_a", Category = "commodity" }],
+            NextGoodId = "commodity_a"
+        };
+        Assert.True(response.IsValidFor(request));
+        var continuation = request with
+        {
+            CorrelationId = Guid.NewGuid(),
+            AfterGoodId = "commodity_a",
+            ExpectedCatalogRevision = revision
+        };
+        Assert.True(continuation.IsValid());
+        Assert.False((request with { AfterGoodId = "commodity_a" }).IsValid());
+        Assert.False((request with { ExpectedCatalogRevision = "stale" }).IsValid());
+        Assert.False(response.IsValidFor(continuation));
     }
 
     private static MarketGoodSnapshotV1 Good(string marketId, string goodId) => new()
@@ -35,7 +63,9 @@ public sealed class MarketContractsTests
     {
         var request = new MarketSnapshotReadRequestV1
         {
-            CorrelationId = Guid.NewGuid(), SystemId = "li01", PageSize = 2
+            CorrelationId = Guid.NewGuid(),
+            SystemId = "li01",
+            PageSize = 2
         };
         var response = new MarketSnapshotReadResponseV1
         {
@@ -68,8 +98,12 @@ public sealed class MarketContractsTests
     {
         var request = new MarketSnapshotReadRequestV1
         {
-            CorrelationId = Guid.NewGuid(), SystemId = "li01", PageSize = 2,
-            ExpectedSystemRevision = 12, AfterMarketId = "li01_01_base", AfterGoodId = "commodity_food"
+            CorrelationId = Guid.NewGuid(),
+            SystemId = "li01",
+            PageSize = 2,
+            ExpectedSystemRevision = 12,
+            AfterMarketId = "li01_01_base",
+            AfterGoodId = "commodity_food"
         };
         var response = new MarketSnapshotReadResponseV1
         {
@@ -97,14 +131,25 @@ public sealed class MarketContractsTests
     {
         var trade = new MarketTradeEventV1
         {
-            EventId = Guid.NewGuid(), InstanceId = "li-01", ProducerEpoch = Guid.NewGuid(), Sequence = 42,
-            OccurredUtc = DateTimeOffset.UtcNow, MarketId = "li01_01_base", SystemId = "li01",
-            GoodId = "commodity_food", Side = MarketTradeSideV1.Buy, Quantity = 3
+            EventId = Guid.NewGuid(),
+            InstanceId = "li-01",
+            ProducerEpoch = Guid.NewGuid(),
+            Sequence = 42,
+            OccurredUtc = DateTimeOffset.UtcNow,
+            MarketId = "li01_01_base",
+            SystemId = "li01",
+            GoodId = "commodity_food",
+            Side = MarketTradeSideV1.Buy,
+            Quantity = 3
         };
         var acknowledgement = new MarketTradeEventAcknowledgementV1
         {
-            EventId = trade.EventId, InstanceId = trade.InstanceId, ProducerEpoch = trade.ProducerEpoch,
-            Sequence = trade.Sequence, Status = MarketTradeIngestStatusV1.Applied, MarketRevision = 9
+            EventId = trade.EventId,
+            InstanceId = trade.InstanceId,
+            ProducerEpoch = trade.ProducerEpoch,
+            Sequence = trade.Sequence,
+            Status = MarketTradeIngestStatusV1.Applied,
+            MarketRevision = 9
         };
         var unavailable = acknowledgement with { Status = MarketTradeIngestStatusV1.Unavailable, MarketRevision = 0 };
         var duplicate = acknowledgement with { Status = MarketTradeIngestStatusV1.Duplicate };
@@ -130,15 +175,25 @@ public sealed class MarketContractsTests
     {
         var valid = new MarketTradeEventV1
         {
-            EventId = Guid.NewGuid(), InstanceId = "li-01", ProducerEpoch = Guid.NewGuid(), Sequence = 1,
-            OccurredUtc = DateTimeOffset.UtcNow, MarketId = "li01_01_base", SystemId = "li01",
-            GoodId = "commodity_food", Side = MarketTradeSideV1.Buy, Quantity = 1
+            EventId = Guid.NewGuid(),
+            InstanceId = "li-01",
+            ProducerEpoch = Guid.NewGuid(),
+            Sequence = 1,
+            OccurredUtc = DateTimeOffset.UtcNow,
+            MarketId = "li01_01_base",
+            SystemId = "li01",
+            GoodId = "commodity_food",
+            Side = MarketTradeSideV1.Buy,
+            Quantity = 1
         };
 
         Assert.False((valid with { EventId = Guid.Empty }).IsValid());
         Assert.False((valid with { GoodId = "Commodity_Food" }).IsValid());
-        Assert.False((valid with { OccurredUtc = new DateTimeOffset(2026, 10, 11, 12, 0, 0,
-            TimeSpan.FromHours(1)) }).IsValid());
+        Assert.False((valid with
+        {
+            OccurredUtc = new DateTimeOffset(2026, 10, 11, 12, 0, 0,
+            TimeSpan.FromHours(1))
+        }).IsValid());
         Assert.False((valid with { Side = (MarketTradeSideV1)99 }).IsValid());
         Assert.False((valid with { Quantity = 0 }).IsValid());
         Assert.False((valid with { Quantity = MarketTradeEventV1.MaximumQuantity + 1 }).IsValid());
