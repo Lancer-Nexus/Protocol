@@ -31,6 +31,84 @@ public enum MarketTradeIngestStatusV1 : byte
     Unavailable = 5
 }
 
+public enum MarketTradeResolutionV1 : byte
+{
+    Commit = 1,
+    Abort = 2
+}
+
+public enum MarketTradeReservationStatusV1 : byte
+{
+    Reserved = 1,
+    Committed = 2,
+    Aborted = 3,
+    Conflict = 4,
+    Rejected = 5,
+    Unavailable = 6
+}
+
+/// <summary>Idempotently reserves market availability for one Gateway-owned trade ID.</summary>
+[MessagePackObject]
+public sealed record MarketTradeReservationRequestV1
+{
+    public const long MaximumQuantity = MarketTradeEventV1.MaximumQuantity;
+
+    [Key(0)] public int SchemaVersion { get; init; } = 1;
+    [Key(1)] public Guid CorrelationId { get; init; }
+    [Key(2)] public Guid TradeId { get; init; }
+    [Key(3)] public string MarketId { get; init; } = "";
+    [Key(4)] public string SystemId { get; init; } = "";
+    [Key(5)] public string GoodId { get; init; } = "";
+    [Key(6)] public MarketTradeSideV1 Side { get; init; }
+    [Key(7)] public long Quantity { get; init; }
+    [Key(8)] public long ExpectedMarketRevision { get; init; }
+
+    public bool IsValid() => SchemaVersion == 1 && CorrelationId != Guid.Empty && TradeId != Guid.Empty &&
+        MarketContractValidation.ValidId(MarketId) && MarketContractValidation.ValidId(SystemId) &&
+        MarketContractValidation.ValidId(GoodId) && Enum.IsDefined(Side) &&
+        Quantity is > 0 and <= MaximumQuantity && ExpectedMarketRevision > 0;
+}
+
+/// <summary>Commits or aborts one previously reserved Gateway trade.</summary>
+[MessagePackObject]
+public sealed record MarketTradeResolutionRequestV1
+{
+    [Key(0)] public int SchemaVersion { get; init; } = 1;
+    [Key(1)] public Guid CorrelationId { get; init; }
+    [Key(2)] public Guid TradeId { get; init; }
+    [Key(3)] public MarketTradeResolutionV1 Resolution { get; init; }
+
+    public bool IsValid() => SchemaVersion == 1 && CorrelationId != Guid.Empty && TradeId != Guid.Empty &&
+        Enum.IsDefined(Resolution);
+}
+
+/// <summary>Stable result of reserving or resolving one trade ID.</summary>
+[MessagePackObject]
+public sealed record MarketTradeReservationResponseV1
+{
+    [Key(0)] public int SchemaVersion { get; init; } = 1;
+    [Key(1)] public Guid CorrelationId { get; init; }
+    [Key(2)] public Guid TradeId { get; init; }
+    [Key(3)] public MarketTradeReservationStatusV1 Status { get; init; }
+    [Key(4)] public long QuoteUnitPrice { get; init; }
+    [Key(5)] public long TotalPrice { get; init; }
+    [Key(6)] public long MarketRevision { get; init; }
+    [Key(7)] public long SystemRevision { get; init; }
+
+    public bool IsValid() => SchemaVersion == 1 && CorrelationId != Guid.Empty && TradeId != Guid.Empty &&
+        Enum.IsDefined(Status) && QuoteUnitPrice >= 0 && TotalPrice >= 0 && MarketRevision >= 0 &&
+        SystemRevision >= 0 &&
+        (Status is MarketTradeReservationStatusV1.Reserved or MarketTradeReservationStatusV1.Committed or
+            MarketTradeReservationStatusV1.Aborted
+            ? MarketRevision > 0 && SystemRevision > 0
+            : MarketRevision == 0 && SystemRevision == 0 && QuoteUnitPrice == 0 && TotalPrice == 0);
+
+    public bool Matches(MarketTradeReservationRequestV1 request) => request is not null && request.IsValid() &&
+        IsValid() && TradeId == request.TradeId && CorrelationId == request.CorrelationId;
+    public bool Matches(MarketTradeResolutionRequestV1 request) => request is not null && request.IsValid() &&
+        IsValid() && TradeId == request.TradeId && CorrelationId == request.CorrelationId;
+}
+
 /// <summary>Reads one bounded page from the shared market projection for a system.</summary>
 [MessagePackObject]
 public sealed record MarketSnapshotReadRequestV1

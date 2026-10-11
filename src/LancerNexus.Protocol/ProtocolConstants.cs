@@ -33,7 +33,11 @@ public enum ClusterMessageType : ushort
     MarketSnapshotReadRequest = 310,
     MarketSnapshotReadResponse = 311,
     MarketTradeEvent = 312,
-    MarketTradeEventAcknowledgement = 313
+    MarketTradeEventAcknowledgement = 313,
+    MarketTradeReservationRequest = 314,
+    MarketTradeReservationResponse = 315,
+    MarketTradeResolutionRequest = 316,
+    MarketTradeResolutionResponse = 317
 }
 
 public static class ClusterCapabilities
