@@ -29,7 +29,11 @@ public enum ClusterMessageType : ushort
     FlHookEvent = 302,
     FlHookEventReplayRequest = 303,
     FlHookEventReplayResult = 304,
-    FlHookEventIngestResult = 305
+    FlHookEventIngestResult = 305,
+    MarketSnapshotReadRequest = 310,
+    MarketSnapshotReadResponse = 311,
+    MarketTradeEvent = 312,
+    MarketTradeEventAcknowledgement = 313
 }
 
 public static class ClusterCapabilities
@@ -39,6 +43,7 @@ public static class ClusterCapabilities
     public const string NpcRetirementV1 = "npc_retirement_v1";
     public const string NpcTransferV1 = "npc_transfer_v1";
     public const string FlHookEventsV1 = "flhook_events_v1";
+    public const string DynamicMarketV1 = "dynamic_market_v1";
 }
 
 [Flags]
