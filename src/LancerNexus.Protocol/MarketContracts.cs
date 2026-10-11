@@ -166,7 +166,9 @@ public sealed record MarketTradeReservationResponseV1
     [Key(1)] public Guid CorrelationId { get; init; }
     [Key(2)] public Guid TradeId { get; init; }
     [Key(3)] public MarketTradeReservationStatusV1 Status { get; init; }
+    /// <summary>The marginal price of the first unit in the reserved quantity.</summary>
     [Key(4)] public long QuoteUnitPrice { get; init; }
+    /// <summary>The sum of each unit's marginal price across the complete quantity.</summary>
     [Key(5)] public long TotalPrice { get; init; }
     [Key(6)] public long MarketRevision { get; init; }
     [Key(7)] public long SystemRevision { get; init; }
