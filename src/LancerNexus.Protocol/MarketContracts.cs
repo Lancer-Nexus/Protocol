@@ -120,7 +120,10 @@ public enum MarketTradeReservationStatusV1 : byte
     Aborted = 3,
     Conflict = 4,
     Rejected = 5,
-    Unavailable = 6
+    Unavailable = 6,
+    MarketRevisionMismatch = 7,
+    ReputationRevisionMismatch = 8,
+    NotFound = 9
 }
 
 /// <summary>Idempotently reserves market availability for one Gateway-owned trade ID.</summary>
@@ -173,13 +176,19 @@ public sealed record MarketTradeReservationResponseV1
     [Key(6)] public long MarketRevision { get; init; }
     [Key(7)] public long SystemRevision { get; init; }
 
-    public bool IsValid() => SchemaVersion == 1 && CorrelationId != Guid.Empty && TradeId != Guid.Empty &&
-        Enum.IsDefined(Status) && QuoteUnitPrice >= 0 && TotalPrice >= 0 && MarketRevision >= 0 &&
-        SystemRevision >= 0 &&
-        (Status is MarketTradeReservationStatusV1.Reserved or MarketTradeReservationStatusV1.Committed or
-            MarketTradeReservationStatusV1.Aborted
-            ? MarketRevision > 0 && SystemRevision > 0
-            : MarketRevision == 0 && SystemRevision == 0 && QuoteUnitPrice == 0 && TotalPrice == 0);
+    public bool IsValid()
+    {
+        if (SchemaVersion != 1 || CorrelationId == Guid.Empty || TradeId == Guid.Empty ||
+            !Enum.IsDefined(Status) || QuoteUnitPrice < 0 || TotalPrice < 0 || MarketRevision < 0 ||
+            SystemRevision < 0)
+            return false;
+        if (Status is MarketTradeReservationStatusV1.Reserved or MarketTradeReservationStatusV1.Committed or
+            MarketTradeReservationStatusV1.Aborted)
+            return MarketRevision > 0 && SystemRevision > 0;
+        if (Status == MarketTradeReservationStatusV1.MarketRevisionMismatch)
+            return MarketRevision > 0 && SystemRevision == 0 && QuoteUnitPrice == 0 && TotalPrice == 0;
+        return MarketRevision == 0 && SystemRevision == 0 && QuoteUnitPrice == 0 && TotalPrice == 0;
+    }
 
     public bool Matches(MarketTradeReservationRequestV1 request) => request is not null && request.IsValid() &&
         IsValid() && TradeId == request.TradeId && CorrelationId == request.CorrelationId;
@@ -208,12 +217,16 @@ public sealed record MarketTradeQuoteReservationRequestV1
     [Key(10)] public long ReputationPriceFactorPartsPerMillion { get; init; } = PartsPerMillion;
     [Key(11)] public long ExpectedQuoteUnitPrice { get; init; }
     [Key(12)] public long ExpectedTotalPrice { get; init; }
+    [Key(13)] public long CharacterId { get; init; }
+    [Key(14)] public string MarketFactionId { get; init; } = "";
 
     public bool IsValid() => SchemaVersion == 1 && CorrelationId != Guid.Empty && TradeId != Guid.Empty &&
         MarketContractValidation.ValidId(MarketId) && MarketContractValidation.ValidId(SystemId) &&
         MarketContractValidation.ValidId(GoodId) && Enum.IsDefined(Side) &&
         Quantity is > 0 and <= MarketTradeEventV1.MaximumQuantity && ExpectedMarketRevision > 0 &&
-        ExpectedReputationRevision > 0 && ReputationPriceFactorPartsPerMillion is
+        ExpectedReputationRevision > 0 && CharacterId > 0 &&
+        MarketContractValidation.ValidId(MarketFactionId) && MarketFactionId.Length <= 64 &&
+        ReputationPriceFactorPartsPerMillion is
             >= MinimumPriceFactorPartsPerMillion and <= MaximumPriceFactorPartsPerMillion &&
         ExpectedQuoteUnitPrice >= 0 && ExpectedTotalPrice >= 0;
 }
@@ -232,25 +245,48 @@ public sealed record MarketTradeQuoteReservationResponseV1
     [Key(7)] public long SystemRevision { get; init; }
     [Key(8)] public long ReputationRevision { get; init; }
     [Key(9)] public long ReputationPriceFactorPartsPerMillion { get; init; }
+    [Key(10)] public string? MarketFactionId { get; init; }
 
-    public bool IsValid() => SchemaVersion == 1 && CorrelationId != Guid.Empty && TradeId != Guid.Empty &&
-        Enum.IsDefined(Status) && QuoteUnitPrice >= 0 && TotalPrice >= 0 && MarketRevision >= 0 &&
-        SystemRevision >= 0 && ReputationRevision >= 0 && ReputationPriceFactorPartsPerMillion is
-            >= MarketTradeQuoteReservationRequestV1.MinimumPriceFactorPartsPerMillion and
-            <= MarketTradeQuoteReservationRequestV1.MaximumPriceFactorPartsPerMillion &&
-        (Status is MarketTradeReservationStatusV1.Reserved or MarketTradeReservationStatusV1.Committed or
-            MarketTradeReservationStatusV1.Aborted
-            ? MarketRevision > 0 && SystemRevision > 0 && ReputationRevision > 0
-            : MarketRevision == 0 && SystemRevision == 0 && ReputationRevision == 0 &&
-              QuoteUnitPrice == 0 && TotalPrice == 0);
+    public bool IsValid()
+    {
+        if (SchemaVersion != 1 || CorrelationId == Guid.Empty || TradeId == Guid.Empty ||
+            !Enum.IsDefined(Status) || QuoteUnitPrice < 0 || TotalPrice < 0 || MarketRevision < 0 ||
+            SystemRevision < 0 || ReputationRevision < 0 ||
+            ReputationPriceFactorPartsPerMillion is < 0 or >
+                MarketTradeQuoteReservationRequestV1.MaximumPriceFactorPartsPerMillion)
+            return false;
+        if (Status is MarketTradeReservationStatusV1.Reserved or MarketTradeReservationStatusV1.Committed or
+            MarketTradeReservationStatusV1.Aborted)
+            return MarketRevision > 0 && SystemRevision > 0 && ReputationRevision > 0 &&
+                   ReputationPriceFactorPartsPerMillion is >=
+                       MarketTradeQuoteReservationRequestV1.MinimumPriceFactorPartsPerMillion and <=
+                       MarketTradeQuoteReservationRequestV1.MaximumPriceFactorPartsPerMillion &&
+                   MarketContractValidation.ValidId(MarketFactionId);
+        if (MarketRevision != 0 && Status != MarketTradeReservationStatusV1.MarketRevisionMismatch ||
+            ReputationRevision != 0 && Status != MarketTradeReservationStatusV1.ReputationRevisionMismatch ||
+            SystemRevision != 0 || QuoteUnitPrice != 0 || TotalPrice != 0 ||
+            ReputationPriceFactorPartsPerMillion != 0 || MarketFactionId is not null)
+            return false;
+        return Status switch
+        {
+            MarketTradeReservationStatusV1.MarketRevisionMismatch => MarketRevision > 0,
+            MarketTradeReservationStatusV1.ReputationRevisionMismatch => ReputationRevision > 0,
+            _ => MarketRevision == 0 && ReputationRevision == 0
+        };
+    }
 
     public bool Matches(MarketTradeQuoteReservationRequestV1 request) => request is not null &&
         request.IsValid() && IsValid() && TradeId == request.TradeId && CorrelationId == request.CorrelationId &&
         (Status is MarketTradeReservationStatusV1.Reserved or MarketTradeReservationStatusV1.Committed or
             MarketTradeReservationStatusV1.Aborted
             ? ReputationRevision == request.ExpectedReputationRevision &&
-              ReputationPriceFactorPartsPerMillion == request.ReputationPriceFactorPartsPerMillion
-            : ReputationRevision == 0);
+              ReputationPriceFactorPartsPerMillion == request.ReputationPriceFactorPartsPerMillion &&
+              MarketFactionId == request.MarketFactionId
+            : Status == MarketTradeReservationStatusV1.ReputationRevisionMismatch
+                ? ReputationRevision != request.ExpectedReputationRevision
+                : Status == MarketTradeReservationStatusV1.MarketRevisionMismatch
+                    ? MarketRevision != request.ExpectedMarketRevision
+                    : true);
 }
 
 /// <summary>Reads one bounded page from the shared market projection for a system.</summary>

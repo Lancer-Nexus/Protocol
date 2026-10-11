@@ -119,7 +119,9 @@ public sealed class MarketTradeReservationContractsTests
             ExpectedReputationRevision = 8,
             ReputationPriceFactorPartsPerMillion = 950_000,
             ExpectedQuoteUnitPrice = 95,
-            ExpectedTotalPrice = 276
+            ExpectedTotalPrice = 276,
+            CharacterId = 42,
+            MarketFactionId = "li_grp"
         };
         var response = new MarketTradeQuoteReservationResponseV1
         {
@@ -131,7 +133,8 @@ public sealed class MarketTradeReservationContractsTests
             MarketRevision = 15,
             SystemRevision = 22,
             ReputationRevision = request.ExpectedReputationRevision,
-            ReputationPriceFactorPartsPerMillion = request.ReputationPriceFactorPartsPerMillion
+            ReputationPriceFactorPartsPerMillion = request.ReputationPriceFactorPartsPerMillion,
+            MarketFactionId = request.MarketFactionId
         };
 
         Assert.True(request.IsValid());
@@ -139,11 +142,27 @@ public sealed class MarketTradeReservationContractsTests
         Assert.True(response.Matches(request));
         Assert.Equal(request, RoundTrip(request));
         Assert.Equal(response, RoundTrip(response));
-        Assert.Equal(13, ArrayLength(request));
-        Assert.Equal(10, ArrayLength(response));
+        Assert.Equal(15, ArrayLength(request));
+        Assert.Equal(11, ArrayLength(response));
         Assert.False((request with { ExpectedReputationRevision = 0 }).IsValid());
         Assert.False((request with { ReputationPriceFactorPartsPerMillion = 2_000_000 }).IsValid());
         Assert.False((response with { ReputationRevision = 9 }).Matches(request));
+        var staleReputation = response with
+        {
+            Status = MarketTradeReservationStatusV1.ReputationRevisionMismatch,
+            QuoteUnitPrice = 0, TotalPrice = 0, MarketRevision = 0, SystemRevision = 0,
+            ReputationRevision = 9, ReputationPriceFactorPartsPerMillion = 0, MarketFactionId = null
+        };
+        var staleMarket = response with
+        {
+            Status = MarketTradeReservationStatusV1.MarketRevisionMismatch,
+            QuoteUnitPrice = 0, TotalPrice = 0, MarketRevision = 15, SystemRevision = 0,
+            ReputationRevision = 0, ReputationPriceFactorPartsPerMillion = 0, MarketFactionId = null
+        };
+        Assert.True(staleReputation.IsValid());
+        Assert.True(staleReputation.Matches(request));
+        Assert.True(staleMarket.IsValid());
+        Assert.True(staleMarket.Matches(request));
     }
 
     private static T RoundTrip<T>(T value) =>
