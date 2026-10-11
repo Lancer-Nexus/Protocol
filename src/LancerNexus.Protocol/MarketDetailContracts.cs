@@ -60,7 +60,7 @@ public sealed record MarketGoodReadResponseV1
                 (request.ExpectedMarketRevision is null || request.ExpectedMarketRevision == MarketRevision),
             MarketGoodReadStatusV1.NotFound => SystemRevision > 0 && MarketRevision == 0 && Good is null &&
                 (request.ExpectedSystemRevision is null || request.ExpectedSystemRevision == SystemRevision),
-            MarketGoodReadStatusV1.RevisionMismatch => Good is null &&
+            MarketGoodReadStatusV1.RevisionMismatch => SystemRevision > 0 && Good is null &&
                 ((request.ExpectedSystemRevision is long expectedSystem && SystemRevision > 0 &&
                   expectedSystem != SystemRevision) ||
                  (request.ExpectedMarketRevision is long expectedMarket && MarketRevision > 0 &&
