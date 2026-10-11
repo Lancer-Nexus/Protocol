@@ -115,6 +115,38 @@ public sealed class MarketContractsTests
     }
 
     [Fact]
+    public void GameInstanceMarketQuoteRequiresLeaseFenceAndProjectsOnlyQuoteInputs()
+    {
+        var request = new MarketTradeQuoteReadRequestV1
+        {
+            CorrelationId = Guid.NewGuid(),
+            CharacterId = 42,
+            LeaseToken = new string('A', 43),
+            LeaseVersion = 3,
+            SystemId = "li-01",
+            MarketId = "li01_base",
+            GoodId = "commodity_food",
+            Side = MarketTradeSideV1.Buy,
+            Quantity = 2,
+            ExpectedMarketRevision = 7
+        };
+
+        Assert.True(request.IsValid());
+        Assert.Equal(request, MessagePackSerializer.Deserialize<MarketTradeQuoteReadRequestV1>(
+            MessagePackSerializer.Serialize(request)));
+        Assert.False((request with { LeaseToken = "invalid" }).IsValid());
+        Assert.False((request with { LeaseVersion = 0 }).IsValid());
+        Assert.False((request with { ExpectedMarketRevision = 0 }).IsValid());
+
+        var quoteRequest = request.ToMarketQuoteRequest(expectedReputationRevision: 9);
+        Assert.True(quoteRequest.IsValid());
+        Assert.Equal(request.CorrelationId, quoteRequest.CorrelationId);
+        Assert.Equal(request.CharacterId, quoteRequest.CharacterId);
+        Assert.Equal(request.ExpectedMarketRevision, quoteRequest.ExpectedMarketRevision);
+        Assert.Equal(9, quoteRequest.ExpectedReputationRevision);
+    }
+
+    [Fact]
     public void CatalogReadContractsPinBoundedPagesToSeedRevision()
     {
         var revision = new string('a', 64);

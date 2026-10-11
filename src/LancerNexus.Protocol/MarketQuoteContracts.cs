@@ -12,6 +12,43 @@ public enum MarketQuoteStatusV1 : byte
     Unavailable = 6
 }
 
+/// <summary>Requests a market quote from an authenticated game instance and binds it to a live character lease.</summary>
+[MessagePackObject]
+public sealed record MarketTradeQuoteReadRequestV1
+{
+    [Key(0)] public int SchemaVersion { get; init; } = 1;
+    [Key(1)] public Guid CorrelationId { get; init; }
+    [Key(2)] public long CharacterId { get; init; }
+    [Key(3)] public string LeaseToken { get; init; } = "";
+    [Key(4)] public long LeaseVersion { get; init; }
+    [Key(5)] public string SystemId { get; init; } = "";
+    [Key(6)] public string MarketId { get; init; } = "";
+    [Key(7)] public string GoodId { get; init; } = "";
+    [Key(8)] public MarketTradeSideV1 Side { get; init; }
+    [Key(9)] public long Quantity { get; init; }
+    [Key(10)] public long? ExpectedMarketRevision { get; init; }
+
+    public bool IsValid() => SchemaVersion == 1 && CorrelationId != Guid.Empty && CharacterId > 0 &&
+        CharacterSaveSnapshotWriteRequestV1.IsLeaseToken(LeaseToken) && LeaseVersion > 0 &&
+        MarketContractValidation.ValidId(SystemId) && MarketContractValidation.ValidId(MarketId) &&
+        MarketContractValidation.ValidId(GoodId) && Enum.IsDefined(Side) &&
+        Quantity is > 0 and <= MarketTradeEventV1.MaximumQuantity &&
+        (ExpectedMarketRevision is null or > 0);
+
+    public MarketQuoteRequestV1 ToMarketQuoteRequest(long expectedReputationRevision) => new()
+    {
+        CorrelationId = CorrelationId,
+        CharacterId = CharacterId,
+        SystemId = SystemId,
+        MarketId = MarketId,
+        GoodId = GoodId,
+        Side = Side,
+        Quantity = Quantity,
+        ExpectedMarketRevision = ExpectedMarketRevision,
+        ExpectedReputationRevision = expectedReputationRevision
+    };
+}
+
 /// <summary>
 /// Requests a character-bound market price preview. The Coordinator obtains reputation
 /// from Gateway using the expected snapshot revision; callers never submit reputation values.
