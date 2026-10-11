@@ -52,7 +52,8 @@ public sealed class MarketContractsTests
             ReputationFactorPartsPerMillion = 950_000,
             QuoteUnitPrice = 95,
             TotalPrice = 285,
-            ExpiresUtc = DateTimeOffset.UtcNow.AddSeconds(15)
+            ExpiresUtc = DateTimeOffset.UtcNow.AddSeconds(15),
+            PricingPolicyVersion = 1
         };
         Assert.True(request.IsValid());
         Assert.True(response.IsValidFor(request));

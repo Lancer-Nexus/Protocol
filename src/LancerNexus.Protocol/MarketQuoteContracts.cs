@@ -58,6 +58,7 @@ public sealed record MarketQuoteResponseV1
     [Key(14)] public long QuoteUnitPrice { get; init; }
     [Key(15)] public long TotalPrice { get; init; }
     [Key(16)] public DateTimeOffset ExpiresUtc { get; init; }
+    [Key(17)] public int PricingPolicyVersion { get; init; }
 
     public bool IsValidFor(MarketQuoteRequestV1 request)
     {
@@ -73,7 +74,8 @@ public sealed record MarketQuoteResponseV1
                 MarketContractValidation.ValidId(MarketFactionId) && float.IsFinite(AppliedReputation) &&
                 AppliedReputation is >= -1f and <= 1f &&
                 ReputationFactorPartsPerMillion is >= 750_000 and <= 1_250_000 &&
-                ExpiresUtc.Offset == TimeSpan.Zero && ExpiresUtc > DateTimeOffset.MinValue;
+                ExpiresUtc.Offset == TimeSpan.Zero && ExpiresUtc > DateTimeOffset.MinValue &&
+                PricingPolicyVersion == 1;
         if (Status == MarketQuoteStatusV1.MarketRevisionMismatch)
             return request.ExpectedMarketRevision is not null && MarketRevision > 0 &&
                 MarketRevision != request.ExpectedMarketRevision && ReputationRevision == 0 &&
@@ -82,6 +84,6 @@ public sealed record MarketQuoteResponseV1
             return ReputationRevision > 0 && ReputationRevision != request.ExpectedReputationRevision &&
                 MarketRevision == 0 && MarketFactionId is null && QuoteUnitPrice == 0 && TotalPrice == 0;
         return MarketRevision == 0 && ReputationRevision == 0 && MarketFactionId is null &&
-            QuoteUnitPrice == 0 && TotalPrice == 0;
+            QuoteUnitPrice == 0 && TotalPrice == 0 && PricingPolicyVersion == 0;
     }
 }
