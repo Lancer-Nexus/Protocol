@@ -70,7 +70,9 @@ public sealed record MarketQuoteResponseV1
             return false;
 
         if (Status == MarketQuoteStatusV1.Quoted)
-            return MarketRevision > 0 && ReputationRevision == request.ExpectedReputationRevision &&
+            return MarketRevision > 0 &&
+                (request.ExpectedMarketRevision is null || request.ExpectedMarketRevision == MarketRevision) &&
+                ReputationRevision == request.ExpectedReputationRevision &&
                 MarketContractValidation.ValidId(MarketFactionId) && float.IsFinite(AppliedReputation) &&
                 AppliedReputation is >= -1f and <= 1f &&
                 ReputationFactorPartsPerMillion is >= 750_000 and <= 1_250_000 &&
@@ -79,11 +81,15 @@ public sealed record MarketQuoteResponseV1
         if (Status == MarketQuoteStatusV1.MarketRevisionMismatch)
             return request.ExpectedMarketRevision is not null && MarketRevision > 0 &&
                 MarketRevision != request.ExpectedMarketRevision && ReputationRevision == 0 &&
-                MarketFactionId is null && QuoteUnitPrice == 0 && TotalPrice == 0;
+                MarketFactionId is null && AppliedReputation == 0 && ReputationFactorPartsPerMillion == 0 &&
+                QuoteUnitPrice == 0 && TotalPrice == 0 && ExpiresUtc == default && PricingPolicyVersion == 0;
         if (Status == MarketQuoteStatusV1.ReputationRevisionMismatch)
             return ReputationRevision > 0 && ReputationRevision != request.ExpectedReputationRevision &&
-                MarketRevision == 0 && MarketFactionId is null && QuoteUnitPrice == 0 && TotalPrice == 0;
+                MarketRevision == 0 && MarketFactionId is null && AppliedReputation == 0 &&
+                ReputationFactorPartsPerMillion == 0 && QuoteUnitPrice == 0 && TotalPrice == 0 &&
+                ExpiresUtc == default && PricingPolicyVersion == 0;
         return MarketRevision == 0 && ReputationRevision == 0 && MarketFactionId is null &&
-            QuoteUnitPrice == 0 && TotalPrice == 0 && PricingPolicyVersion == 0;
+            AppliedReputation == 0 && ReputationFactorPartsPerMillion == 0 && QuoteUnitPrice == 0 &&
+            TotalPrice == 0 && ExpiresUtc == default && PricingPolicyVersion == 0;
     }
 }

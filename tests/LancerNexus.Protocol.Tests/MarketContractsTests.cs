@@ -59,6 +59,7 @@ public sealed class MarketContractsTests
         Assert.True(response.IsValidFor(request));
         Assert.False(response.IsValidFor(request with { CharacterId = 43 }));
         Assert.False(response.IsValidFor(request with { ExpectedReputationRevision = 10 }));
+        Assert.False(response.IsValidFor(request with { ExpectedMarketRevision = 8 }));
         Assert.False((request with { Quantity = MarketTradeEventV1.MaximumQuantity + 1 }).IsValid());
         Assert.False((response with { ReputationFactorPartsPerMillion = 500_000 }).IsValidFor(request));
     }
