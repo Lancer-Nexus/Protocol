@@ -187,6 +187,72 @@ public sealed record MarketTradeReservationResponseV1
         IsValid() && TradeId == request.TradeId && CorrelationId == request.CorrelationId;
 }
 
+/// <summary>Reserves a trade only when its market and reputation-bound quote still matches.</summary>
+[MessagePackObject]
+public sealed record MarketTradeQuoteReservationRequestV1
+{
+    public const long MinimumPriceFactorPartsPerMillion = 750_000;
+    public const long MaximumPriceFactorPartsPerMillion = 1_250_000;
+    public const long PartsPerMillion = 1_000_000;
+
+    [Key(0)] public int SchemaVersion { get; init; } = 1;
+    [Key(1)] public Guid CorrelationId { get; init; }
+    [Key(2)] public Guid TradeId { get; init; }
+    [Key(3)] public string MarketId { get; init; } = "";
+    [Key(4)] public string SystemId { get; init; } = "";
+    [Key(5)] public string GoodId { get; init; } = "";
+    [Key(6)] public MarketTradeSideV1 Side { get; init; }
+    [Key(7)] public long Quantity { get; init; }
+    [Key(8)] public long ExpectedMarketRevision { get; init; }
+    [Key(9)] public long ExpectedReputationRevision { get; init; }
+    [Key(10)] public long ReputationPriceFactorPartsPerMillion { get; init; } = PartsPerMillion;
+    [Key(11)] public long ExpectedQuoteUnitPrice { get; init; }
+    [Key(12)] public long ExpectedTotalPrice { get; init; }
+
+    public bool IsValid() => SchemaVersion == 1 && CorrelationId != Guid.Empty && TradeId != Guid.Empty &&
+        MarketContractValidation.ValidId(MarketId) && MarketContractValidation.ValidId(SystemId) &&
+        MarketContractValidation.ValidId(GoodId) && Enum.IsDefined(Side) &&
+        Quantity is > 0 and <= MarketTradeEventV1.MaximumQuantity && ExpectedMarketRevision > 0 &&
+        ExpectedReputationRevision > 0 && ReputationPriceFactorPartsPerMillion is
+            >= MinimumPriceFactorPartsPerMillion and <= MaximumPriceFactorPartsPerMillion &&
+        ExpectedQuoteUnitPrice >= 0 && ExpectedTotalPrice >= 0;
+}
+
+/// <summary>Stable response for a quote-bound market reservation.</summary>
+[MessagePackObject]
+public sealed record MarketTradeQuoteReservationResponseV1
+{
+    [Key(0)] public int SchemaVersion { get; init; } = 1;
+    [Key(1)] public Guid CorrelationId { get; init; }
+    [Key(2)] public Guid TradeId { get; init; }
+    [Key(3)] public MarketTradeReservationStatusV1 Status { get; init; }
+    [Key(4)] public long QuoteUnitPrice { get; init; }
+    [Key(5)] public long TotalPrice { get; init; }
+    [Key(6)] public long MarketRevision { get; init; }
+    [Key(7)] public long SystemRevision { get; init; }
+    [Key(8)] public long ReputationRevision { get; init; }
+    [Key(9)] public long ReputationPriceFactorPartsPerMillion { get; init; }
+
+    public bool IsValid() => SchemaVersion == 1 && CorrelationId != Guid.Empty && TradeId != Guid.Empty &&
+        Enum.IsDefined(Status) && QuoteUnitPrice >= 0 && TotalPrice >= 0 && MarketRevision >= 0 &&
+        SystemRevision >= 0 && ReputationRevision >= 0 && ReputationPriceFactorPartsPerMillion is
+            >= MarketTradeQuoteReservationRequestV1.MinimumPriceFactorPartsPerMillion and
+            <= MarketTradeQuoteReservationRequestV1.MaximumPriceFactorPartsPerMillion &&
+        (Status is MarketTradeReservationStatusV1.Reserved or MarketTradeReservationStatusV1.Committed or
+            MarketTradeReservationStatusV1.Aborted
+            ? MarketRevision > 0 && SystemRevision > 0 && ReputationRevision > 0
+            : MarketRevision == 0 && SystemRevision == 0 && ReputationRevision == 0 &&
+              QuoteUnitPrice == 0 && TotalPrice == 0);
+
+    public bool Matches(MarketTradeQuoteReservationRequestV1 request) => request is not null &&
+        request.IsValid() && IsValid() && TradeId == request.TradeId && CorrelationId == request.CorrelationId &&
+        (Status is MarketTradeReservationStatusV1.Reserved or MarketTradeReservationStatusV1.Committed or
+            MarketTradeReservationStatusV1.Aborted
+            ? ReputationRevision == request.ExpectedReputationRevision &&
+              ReputationPriceFactorPartsPerMillion == request.ReputationPriceFactorPartsPerMillion
+            : ReputationRevision == 0);
+}
+
 /// <summary>Reads one bounded page from the shared market projection for a system.</summary>
 [MessagePackObject]
 public sealed record MarketSnapshotReadRequestV1

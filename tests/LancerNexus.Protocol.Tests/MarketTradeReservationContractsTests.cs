@@ -101,6 +101,51 @@ public sealed class MarketTradeReservationContractsTests
         }.IsValid());
     }
 
+    [Fact]
+    public void QuoteBoundReservationBindsBothRevisionsAndExactPrices()
+    {
+        Assert.Equal((ushort)326, (ushort)ClusterMessageType.MarketTradeQuoteReservationRequest);
+        Assert.Equal((ushort)327, (ushort)ClusterMessageType.MarketTradeQuoteReservationResponse);
+        var request = new MarketTradeQuoteReservationRequestV1
+        {
+            CorrelationId = Guid.NewGuid(),
+            TradeId = Guid.NewGuid(),
+            MarketId = "li01_01_base",
+            SystemId = "li01",
+            GoodId = "commodity_food",
+            Side = MarketTradeSideV1.Buy,
+            Quantity = 3,
+            ExpectedMarketRevision = 14,
+            ExpectedReputationRevision = 8,
+            ReputationPriceFactorPartsPerMillion = 950_000,
+            ExpectedQuoteUnitPrice = 95,
+            ExpectedTotalPrice = 276
+        };
+        var response = new MarketTradeQuoteReservationResponseV1
+        {
+            CorrelationId = request.CorrelationId,
+            TradeId = request.TradeId,
+            Status = MarketTradeReservationStatusV1.Reserved,
+            QuoteUnitPrice = 95,
+            TotalPrice = 276,
+            MarketRevision = 15,
+            SystemRevision = 22,
+            ReputationRevision = request.ExpectedReputationRevision,
+            ReputationPriceFactorPartsPerMillion = request.ReputationPriceFactorPartsPerMillion
+        };
+
+        Assert.True(request.IsValid());
+        Assert.True(response.IsValid());
+        Assert.True(response.Matches(request));
+        Assert.Equal(request, RoundTrip(request));
+        Assert.Equal(response, RoundTrip(response));
+        Assert.Equal(13, ArrayLength(request));
+        Assert.Equal(10, ArrayLength(response));
+        Assert.False((request with { ExpectedReputationRevision = 0 }).IsValid());
+        Assert.False((request with { ReputationPriceFactorPartsPerMillion = 2_000_000 }).IsValid());
+        Assert.False((response with { ReputationRevision = 9 }).Matches(request));
+    }
+
     private static T RoundTrip<T>(T value) =>
         MessagePackSerializer.Deserialize<T>(MessagePackSerializer.Serialize(value));
 
