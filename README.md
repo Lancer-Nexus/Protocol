@@ -20,6 +20,8 @@ AdminContracts defines bounded read-only AdminQuery commands (help/status/instan
 
 `MarketGoodReadRequestV1` reads one exact `(systemId, marketId, goodId)` row and can pin both system and market revisions. Its response distinguishes a missing offer from unavailable storage and stale revisions; a found row must match all requested identifiers and the reported market revision. Message IDs 324–325 identify the pair. This read contract does not grant trade authority.
 
+`MarketSystemsReadRequestV1` and `MarketSystemsReadResponseV1` provide a bounded, keyset-paginated cluster directory pinned to the immutable market seed revision. Each system reports its market count and static offer coverage; systems with no markets or offers remain visible. Coordinator and Gateway expose it through internal and public REST facades. The directory contains no player identity or reputation.
+
 This repository contains versioned contracts for communication between the Lancer Nexus Client, Gateway, Coordinator, Agents and game instances.
 
 ## Protocol basis
