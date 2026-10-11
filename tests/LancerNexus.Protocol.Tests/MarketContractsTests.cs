@@ -19,6 +19,10 @@ public sealed class MarketContractsTests
         Assert.Equal((ushort)323, (ushort)ClusterMessageType.MarketQuoteResponse);
         Assert.Equal((ushort)324, (ushort)ClusterMessageType.MarketGoodReadRequest);
         Assert.Equal((ushort)325, (ushort)ClusterMessageType.MarketGoodReadResponse);
+        Assert.Equal((ushort)328, (ushort)ClusterMessageType.MarketTradeBundleReservationRequest);
+        Assert.Equal((ushort)329, (ushort)ClusterMessageType.MarketTradeBundleReservationResponse);
+        Assert.Equal((ushort)330, (ushort)ClusterMessageType.MarketTradeBundleEvent);
+        Assert.Equal((ushort)331, (ushort)ClusterMessageType.MarketTradeBundleEventAcknowledgement);
         Assert.Equal("dynamic_market_v1", ClusterCapabilities.DynamicMarketV1);
     }
 
