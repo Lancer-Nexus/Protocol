@@ -22,7 +22,17 @@ public static class JoinTicketClaimsValidator
 {
     public static void Validate(JoinTicketClaims claims, DateTime nowUtc, string expectedAudience, TimeSpan allowedClockSkew)
     {
+        if (claims is null)
+            throw new ProtocolViolationException("Join ticket claims are required.");
+        if (allowedClockSkew < TimeSpan.Zero)
+            throw new ProtocolViolationException("Allowed clock skew cannot be negative.");
+        if (nowUtc.Kind != DateTimeKind.Utc || claims.IssuedAtUtc.Kind != DateTimeKind.Utc ||
+            claims.ExpiresAtUtc.Kind != DateTimeKind.Utc)
+            throw new ProtocolViolationException("Join ticket timestamps must use UTC.");
+        if (string.IsNullOrWhiteSpace(expectedAudience))
+            throw new ProtocolViolationException("Expected join ticket audience is required.");
         if (claims.SessionId == Guid.Empty || claims.AccountId == Guid.Empty ||
+            claims.CharacterId is <= 0 ||
             string.IsNullOrWhiteSpace(claims.InstanceId) || string.IsNullOrWhiteSpace(claims.SystemId) ||
             string.IsNullOrWhiteSpace(claims.Endpoint) || string.IsNullOrWhiteSpace(claims.Nonce) ||
             string.IsNullOrWhiteSpace(claims.KeyId))
@@ -31,9 +41,7 @@ public static class JoinTicketClaimsValidator
             throw new ProtocolViolationException("Join ticket audience is invalid.");
         if (claims.ExpiresAtUtc <= claims.IssuedAtUtc)
             throw new ProtocolViolationException("Join ticket expiry must be after issuance.");
-        if (claims.IssuedAtUtc > nowUtc + allowedClockSkew || claims.ExpiresAtUtc < nowUtc - allowedClockSkew)
+        if (claims.IssuedAtUtc - nowUtc > allowedClockSkew || nowUtc - claims.ExpiresAtUtc > allowedClockSkew)
             throw new ProtocolViolationException("Join ticket is not currently valid.");
-        if (allowedClockSkew < TimeSpan.Zero)
-            throw new ProtocolViolationException("Allowed clock skew cannot be negative.");
     }
 }
