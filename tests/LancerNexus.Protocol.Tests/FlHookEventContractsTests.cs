@@ -60,13 +60,18 @@ public sealed class FlHookEventContractsTests
     [Fact]
     public void EventRoundTripsWithStableFieldOrder()
     {
-        var value = Event(FlHookEventKind.PlayerSystemChanged) with { SystemId = "li02" };
+        var value = Event(FlHookEventKind.PlayerSystemChanged) with
+        {
+            SystemId = "li02",
+            CharacterId = 123456,
+            GatewayLeaseVersion = 12
+        };
 
         Assert.True(value.IsValid());
         var bytes = MessagePackSerializer.Serialize(value);
         var decoded = MessagePackSerializer.Deserialize<FlHookEventV1>(bytes);
         Assert.Equal(value, decoded);
-        Assert.Equal(9, new MessagePackReader(bytes).ReadArrayHeader());
+        Assert.Equal(11, new MessagePackReader(bytes).ReadArrayHeader());
         Assert.Equal(1, decoded.SchemaVersion);
     }
 
@@ -75,14 +80,14 @@ public sealed class FlHookEventContractsTests
     [InlineData(FlHookEventKind.CharacterDisconnected)]
     public void CharacterLifecycleEventsRoundTripWithStableCharacterIdentity(FlHookEventKind kind)
     {
-        var value = Event(kind) with { CharacterId = 123456 };
+        var value = Event(kind) with { CharacterId = 123456, GatewayLeaseVersion = 12 };
 
         Assert.True(value.IsValid());
         var bytes = MessagePackSerializer.Serialize(value);
         var decoded = MessagePackSerializer.Deserialize<FlHookEventV1>(bytes);
 
         Assert.Equal(value, decoded);
-        Assert.Equal(9, new MessagePackReader(bytes).ReadArrayHeader());
+        Assert.Equal(11, new MessagePackReader(bytes).ReadArrayHeader());
     }
 
     [Fact]
@@ -102,7 +107,40 @@ public sealed class FlHookEventContractsTests
 
         Assert.Null(decoded.CharacterId);
         Assert.Equal(Guid.Empty, decoded.ProducerEpoch);
+        Assert.Null(decoded.GatewaySessionId);
+        Assert.Null(decoded.GatewayLeaseVersion);
         Assert.True(decoded.IsValid());
+    }
+
+    [Fact]
+    public void PreviousNineFieldEventRemainsReadableAndNewFieldsAreIgnoredByOldReaders()
+    {
+        var previous = MessagePackSerializer.Serialize(new PreviousFlHookEventV1
+        {
+            SchemaVersion = 1,
+            InstanceId = "li-01",
+            Sequence = 7,
+            OccurredUtc = DateTimeOffset.UnixEpoch,
+            Kind = FlHookEventKind.CharacterDisconnected,
+            PlayerId = "player-01",
+            CharacterId = 123,
+            ProducerEpoch = Guid.NewGuid()
+        });
+
+        var decoded = MessagePackSerializer.Deserialize<FlHookEventV1>(previous);
+        Assert.True(decoded.IsValid());
+        Assert.Null(decoded.GatewaySessionId);
+        Assert.Null(decoded.GatewayLeaseVersion);
+
+        var current = Event(FlHookEventKind.CharacterDisconnected) with
+        {
+            CharacterId = 123,
+            GatewayLeaseVersion = 12
+        };
+        var oldReader = MessagePackSerializer.Deserialize<PreviousFlHookEventV1>(
+            MessagePackSerializer.Serialize(current));
+        Assert.Equal(current.CharacterId, oldReader.CharacterId);
+        Assert.Equal(current.ProducerEpoch, oldReader.ProducerEpoch);
     }
 
     [Fact]
@@ -145,6 +183,18 @@ public sealed class FlHookEventContractsTests
         Assert.False(Event(FlHookEventKind.CharacterDisconnected).IsValid());
         Assert.False((Event(FlHookEventKind.CharacterConnected) with { CharacterId = 123, SystemId = "li02" }).IsValid());
         Assert.False((Event(FlHookEventKind.PlayerConnected) with { CharacterId = 123 }).IsValid());
+        Assert.False((Event(FlHookEventKind.PlayerConnected) with { GatewaySessionId = Guid.Empty }).IsValid());
+        Assert.False((Event(FlHookEventKind.CharacterConnected) with
+        {
+            CharacterId = 123,
+            GatewayLeaseVersion = 0
+        }).IsValid());
+        Assert.False((Event(FlHookEventKind.CharacterConnected) with
+        {
+            CharacterId = 123,
+            GatewayLeaseVersion = 10,
+            GatewaySessionId = null
+        }).IsValid());
         Assert.False((Event(FlHookEventKind.PlayerConnected) with { OccurredUtc = DateTimeOffset.UtcNow.ToOffset(TimeSpan.FromHours(1)) }).IsValid());
         Assert.False(new FlHookEventReplayRequestV1 { CorrelationId = Guid.NewGuid(), InstanceId = "li-01", MaximumEvents = 501 }.IsValid());
         Assert.False(new FlHookEventReplayRequestV1 { CorrelationId = Guid.NewGuid(), InstanceId = "li-01", AfterSequence = -1 }.IsValid());
@@ -186,7 +236,8 @@ public sealed class FlHookEventContractsTests
         OccurredUtc = DateTimeOffset.UnixEpoch,
         Kind = kind,
         PlayerId = "player-01",
-        ProducerEpoch = Guid.Parse("05b7f60d-01ba-4d16-99e2-43e373f99ad6")
+        ProducerEpoch = Guid.Parse("05b7f60d-01ba-4d16-99e2-43e373f99ad6"),
+        GatewaySessionId = Guid.Parse("91fe0ff1-9853-4f98-9fbe-154878528aa2")
     };
 
 }
@@ -201,4 +252,18 @@ public sealed record LegacyFlHookEventV1
     [Key(4)] public FlHookEventKind Kind { get; init; }
     [Key(5)] public string? PlayerId { get; init; }
     [Key(6)] public string? SystemId { get; init; }
+}
+
+[MessagePackObject]
+public sealed record PreviousFlHookEventV1
+{
+    [Key(0)] public int SchemaVersion { get; init; }
+    [Key(1)] public string? InstanceId { get; init; }
+    [Key(2)] public long Sequence { get; init; }
+    [Key(3)] public DateTimeOffset OccurredUtc { get; init; }
+    [Key(4)] public FlHookEventKind Kind { get; init; }
+    [Key(5)] public string? PlayerId { get; init; }
+    [Key(6)] public string? SystemId { get; init; }
+    [Key(7)] public long? CharacterId { get; init; }
+    [Key(8)] public Guid ProducerEpoch { get; init; }
 }

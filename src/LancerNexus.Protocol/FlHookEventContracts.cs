@@ -60,6 +60,11 @@ public sealed record FlHookEventV1
     [Key(6)] public string? SystemId { get; init; }
     [Key(7)] public long? CharacterId { get; init; }
     [Key(8)] public Guid ProducerEpoch { get; init; }
+    // Optional for compatibility with event producers predating Gateway session fencing.
+    [Key(9)] public Guid? GatewaySessionId { get; init; }
+    // Optional for player-only events and legacy producers; character-scoped presence
+    // events from current producers carry the authoritative Gateway lease fence.
+    [Key(10)] public long? GatewayLeaseVersion { get; init; }
 
     public bool IsValid()
     {
@@ -68,13 +73,24 @@ public sealed record FlHookEventV1
             !AdminQuery.ValidIdentifier(PlayerId))
             return false;
 
+        if ((GatewaySessionId is Guid sessionId && sessionId == Guid.Empty) ||
+            (GatewayLeaseVersion is long leaseVersion && leaseVersion <= 0) ||
+            (GatewayLeaseVersion is not null && GatewaySessionId is null))
+            return false;
+
         if (Kind == FlHookEventKind.PlayerSystemChanged)
-            return AdminQuery.ValidIdentifier(SystemId) && CharacterId is null;
+        {
+            if (!AdminQuery.ValidIdentifier(SystemId)) return false;
+            return CharacterId is null
+                ? GatewayLeaseVersion is null
+                : CharacterId is > 0 && GatewaySessionId is not null && GatewayLeaseVersion is > 0;
+        }
 
         if (Kind is FlHookEventKind.CharacterConnected or FlHookEventKind.CharacterDisconnected)
-            return SystemId is null && CharacterId is > 0;
+            return SystemId is null && CharacterId is > 0 &&
+                (GatewaySessionId is null ? GatewayLeaseVersion is null : GatewayLeaseVersion is > 0);
 
-        return SystemId is null && CharacterId is null;
+        return SystemId is null && CharacterId is null && GatewayLeaseVersion is null;
     }
 }
 
