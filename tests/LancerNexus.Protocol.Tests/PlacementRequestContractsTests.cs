@@ -1,3 +1,4 @@
+using MessagePack;
 using Xunit;
 
 namespace LancerNexus.Protocol.Tests;
@@ -18,6 +19,20 @@ public sealed class PlacementRequestContractsTests
 
         Assert.True(request.IsValid());
         Assert.True(PlacementRequestValidator.IsValid(request));
+    }
+
+    [Fact]
+    public void ValidationMethodDoesNotChangeNineFieldMessagePackContract()
+    {
+        var request = Request();
+        var bytes = MessagePackSerializer.Serialize(request);
+        var copy = MessagePackSerializer.Deserialize<PlacementRequest>(bytes);
+
+        Assert.Equal(9, new MessagePackReader(bytes).ReadArrayHeader());
+        Assert.Equal(request.RequestId, copy.RequestId);
+        Assert.Equal(request.SessionId, copy.SessionId);
+        Assert.Equal(request.IdempotencyKey, copy.IdempotencyKey);
+        Assert.True(copy.IsValid());
     }
 
     [Fact]
