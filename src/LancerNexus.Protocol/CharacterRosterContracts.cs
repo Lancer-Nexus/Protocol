@@ -20,9 +20,11 @@ public sealed record CharacterRosterEntryV1
 {
     [Key(0)] public long CharacterId { get; init; }
     [Key(1)] public string DisplayName { get; init; } = "";
+    [Key(2)] public string? SystemId { get; init; }
 
     public bool IsValid() => CharacterId > 0 && !string.IsNullOrWhiteSpace(DisplayName) &&
-        DisplayName.Length <= 96 && DisplayName == DisplayName.Trim() && !DisplayName.Any(char.IsControl);
+        DisplayName.Length <= 96 && DisplayName == DisplayName.Trim() && !DisplayName.Any(char.IsControl) &&
+        (SystemId is null || AdminQuery.ValidIdentifier(SystemId));
 }
 
 [MessagePackObject]
@@ -42,6 +44,39 @@ public sealed record CharacterRosterResultV1
             ? ReasonCode == "listed" && Characters.All(character => character is not null && character.IsValid()) &&
               Characters.Select(character => character.CharacterId).Distinct().Count() == Characters.Length
             : ReasonCode == "session_rejected" && Characters.Length == 0);
+}
+
+/// <summary>Requests recovery of missing placement metadata from the caller's authenticated character snapshot.</summary>
+[MessagePackObject]
+public sealed record CharacterSystemMetadataRecoveryRequestV1
+{
+    [Key(0)] public int SchemaVersion { get; init; } = 1;
+    [Key(1)] public Guid CorrelationId { get; init; }
+    [Key(2)] public Guid AccountId { get; init; }
+    [Key(3)] public Guid SessionId { get; init; }
+    [Key(4)] public long CharacterId { get; init; }
+
+    public bool IsValid() => SchemaVersion == 1 && CorrelationId != Guid.Empty &&
+        AccountId != Guid.Empty && SessionId != Guid.Empty && CharacterId > 0;
+}
+
+/// <summary>Resolves legacy placement metadata from the authenticated, protected character snapshot.</summary>
+[MessagePackObject]
+public sealed record CharacterSystemMetadataRecoveryResultV1
+{
+    [Key(0)] public int SchemaVersion { get; init; } = 1;
+    [Key(1)] public Guid CorrelationId { get; init; }
+    [Key(2)] public long CharacterId { get; init; }
+    [Key(3)] public bool Accepted { get; init; }
+    [Key(4)] public string ReasonCode { get; init; } = "";
+    [Key(5)] public string? SystemId { get; init; }
+
+    public bool IsValid() => SchemaVersion == 1 && CorrelationId != Guid.Empty && CharacterId > 0 &&
+        AdminQuery.ValidIdentifier(ReasonCode) &&
+        (Accepted
+            ? (ReasonCode is "recovered" or "already_known") && AdminQuery.ValidIdentifier(SystemId)
+            : SystemId is null && (ReasonCode is "session_rejected" or "character_not_found" or
+                "snapshot_missing" or "system_unknown" or "snapshot_invalid" or "unavailable"));
 }
 
 /// <summary>Requests a history-preserving tombstone for a character owned by the active account.</summary>
@@ -83,9 +118,11 @@ public sealed record CharacterBootstrapRequestV1
     [Key(3)] public Guid SessionId { get; init; }
     [Key(4)] public long CharacterId { get; init; }
     [Key(5)] public byte[] Payload { get; init; } = [];
+    [Key(6)] public string? SystemId { get; init; }
 
     public bool IsValid() => SchemaVersion == 1 && CorrelationId != Guid.Empty &&
         AccountId != Guid.Empty && SessionId != Guid.Empty && CharacterId > 0 &&
+        (SystemId is null || AdminQuery.ValidIdentifier(SystemId)) &&
         Payload is { Length: > 0 and <= CharacterSaveSnapshotWriteRequestV1.MaxPayloadBytes };
 }
 

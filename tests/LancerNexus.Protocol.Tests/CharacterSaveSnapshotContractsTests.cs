@@ -22,7 +22,8 @@ public sealed class CharacterSaveSnapshotContractsTests
             LeaseToken = LeaseToken,
             LeaseVersion = 3,
             Revision = 8,
-            Payload = payload
+            Payload = payload,
+            SystemId = "li03"
         };
         var read = new CharacterSaveSnapshotReadRequestV1
         {
@@ -37,7 +38,8 @@ public sealed class CharacterSaveSnapshotContractsTests
             CharacterId = read.CharacterId,
             LeaseVersion = read.LeaseVersion,
             Revision = write.Revision,
-            Payload = payload
+            Payload = payload,
+            SystemId = write.SystemId
         };
         var result = new CharacterSaveSnapshotWriteResultV1
         {
@@ -58,6 +60,7 @@ public sealed class CharacterSaveSnapshotContractsTests
         Assert.Equal(write.LeaseVersion, decodedWrite.LeaseVersion);
         Assert.Equal(write.Revision, decodedWrite.Revision);
         Assert.Equal(write.Payload, decodedWrite.Payload);
+        Assert.Equal(write.SystemId, decodedWrite.SystemId);
         Assert.Equal(read, MessagePackSerializer.Deserialize<CharacterSaveSnapshotReadRequestV1>(
             MessagePackSerializer.Serialize(read), Untrusted));
         var decodedSnapshot = MessagePackSerializer.Deserialize<CharacterSaveSnapshotV1>(
@@ -66,6 +69,7 @@ public sealed class CharacterSaveSnapshotContractsTests
         Assert.Equal(snapshot.LeaseVersion, decodedSnapshot.LeaseVersion);
         Assert.Equal(snapshot.Revision, decodedSnapshot.Revision);
         Assert.Equal(snapshot.Payload, decodedSnapshot.Payload);
+        Assert.Equal(snapshot.SystemId, decodedSnapshot.SystemId);
         Assert.Equal(result, MessagePackSerializer.Deserialize<CharacterSaveSnapshotWriteResultV1>(
             MessagePackSerializer.Serialize(result), Untrusted));
     }
@@ -86,6 +90,7 @@ public sealed class CharacterSaveSnapshotContractsTests
         Assert.False((write with { LeaseVersion = 0 }).IsValid());
         Assert.False((write with { Revision = 0 }).IsValid());
         Assert.False((write with { LeaseToken = "" }).IsValid());
+        Assert.False((write with { SystemId = "bad system" }).IsValid());
         Assert.False((write with { Payload = [] }).IsValid());
         Assert.False((new CharacterSaveSnapshotReadRequestV1
         {

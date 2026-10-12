@@ -15,9 +15,11 @@ public sealed record CharacterSaveSnapshotWriteRequestV1
     [Key(4)] public long LeaseVersion { get; init; }
     [Key(5)] public long Revision { get; init; }
     [Key(6)] public byte[] Payload { get; init; } = [];
+    [Key(7)] public string? SystemId { get; init; }
 
     public bool IsValid() => SchemaVersion == 1 && CorrelationId != Guid.Empty && CharacterId > 0 &&
         IsLeaseToken(LeaseToken) && LeaseVersion > 0 && Revision > 0 &&
+        (SystemId is null || AdminQuery.ValidIdentifier(SystemId)) &&
         Payload is { Length: > 0 and <= MaxPayloadBytes };
 
     internal static bool IsLeaseToken(string? value)
@@ -53,9 +55,12 @@ public sealed record CharacterSaveSnapshotV1
     [Key(3)] public long LeaseVersion { get; init; }
     [Key(4)] public long Revision { get; init; }
     [Key(5)] public byte[] Payload { get; init; } = [];
+    [Key(6)] public string? SystemId { get; init; }
 
     public bool IsValid() => SchemaVersion == 1 && CorrelationId != Guid.Empty && CharacterId > 0 &&
-        LeaseVersion > 0 && Revision > 0 && Payload is { Length: > 0 and <= CharacterSaveSnapshotWriteRequestV1.MaxPayloadBytes };
+        LeaseVersion > 0 && Revision > 0 &&
+        (SystemId is null || AdminQuery.ValidIdentifier(SystemId)) &&
+        Payload is { Length: > 0 and <= CharacterSaveSnapshotWriteRequestV1.MaxPayloadBytes };
 }
 
 /// <summary>Result of a fenced snapshot write or idempotent retry.</summary>
