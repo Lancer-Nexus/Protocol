@@ -145,7 +145,7 @@ public sealed class FlHookEventContractsTests
         Assert.False(Event(FlHookEventKind.CharacterDisconnected).IsValid());
         Assert.False((Event(FlHookEventKind.CharacterConnected) with { CharacterId = 123, SystemId = "li02" }).IsValid());
         Assert.False((Event(FlHookEventKind.PlayerConnected) with { CharacterId = 123 }).IsValid());
-        Assert.False((Event(FlHookEventKind.PlayerConnected) with { OccurredUtc = DateTimeOffset.Now }).IsValid());
+        Assert.False((Event(FlHookEventKind.PlayerConnected) with { OccurredUtc = DateTimeOffset.UtcNow.ToOffset(TimeSpan.FromHours(1)) }).IsValid());
         Assert.False(new FlHookEventReplayRequestV1 { CorrelationId = Guid.NewGuid(), InstanceId = "li-01", MaximumEvents = 501 }.IsValid());
         Assert.False(new FlHookEventReplayRequestV1 { CorrelationId = Guid.NewGuid(), InstanceId = "li-01", AfterSequence = -1 }.IsValid());
         Assert.False(new FlHookEventReplayRequestV1 { CorrelationId = Guid.NewGuid(), InstanceId = "li-01", ProducerEpoch = Guid.Empty }.IsValid());

@@ -48,7 +48,7 @@ public sealed class CharacterLeaseContractsTests
         Assert.True(accepted.IsValid());
         Assert.False((accepted with { LeaseVersion = null }).IsValid());
         Assert.False((accepted with { ValidUntilUtc = null }).IsValid());
-        Assert.False((accepted with { ValidUntilUtc = DateTimeOffset.Now }).IsValid());
+        Assert.False((accepted with { ValidUntilUtc = DateTimeOffset.UtcNow.ToOffset(TimeSpan.FromHours(1)) }).IsValid());
         Assert.True(new CharacterLeaseAcquireResultV1
         {
             CorrelationId = Guid.NewGuid(),
