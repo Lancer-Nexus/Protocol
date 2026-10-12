@@ -75,8 +75,12 @@ public sealed class CharacterSaveSnapshotContractsTests
     {
         var write = new CharacterSaveSnapshotWriteRequestV1
         {
-            CorrelationId = Guid.NewGuid(), CharacterId = 42, LeaseToken = LeaseToken,
-            LeaseVersion = 3, Revision = 1, Payload = [1]
+            CorrelationId = Guid.NewGuid(),
+            CharacterId = 42,
+            LeaseToken = LeaseToken,
+            LeaseVersion = 3,
+            Revision = 1,
+            Payload = [1]
         };
 
         Assert.False((write with { LeaseVersion = 0 }).IsValid());
@@ -85,12 +89,16 @@ public sealed class CharacterSaveSnapshotContractsTests
         Assert.False((write with { Payload = [] }).IsValid());
         Assert.False((new CharacterSaveSnapshotReadRequestV1
         {
-            CorrelationId = Guid.NewGuid(), CharacterId = 42, LeaseToken = LeaseToken,
+            CorrelationId = Guid.NewGuid(),
+            CharacterId = 42,
+            LeaseToken = LeaseToken,
             LeaseVersion = 0
         }).IsValid());
         Assert.False(new CharacterSaveSnapshotWriteResultV1
         {
-            CorrelationId = Guid.NewGuid(), Accepted = true, ReasonCode = "stored"
+            CorrelationId = Guid.NewGuid(),
+            Accepted = true,
+            ReasonCode = "stored"
         }.IsValid());
     }
 }

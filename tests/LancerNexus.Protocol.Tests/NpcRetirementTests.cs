@@ -7,7 +7,8 @@ public sealed class NpcRetirementTests
 {
     private static NpcRetirementRequestV1 Request(long version = 7) => new()
     {
-        RequestId = Guid.NewGuid(), InstanceId = "source",
+        RequestId = Guid.NewGuid(),
+        InstanceId = "source",
         Npcs = [new() { NpcId = Guid.NewGuid(), OwnershipVersion = version, Reason = NpcRetirementReasonV1.Destroyed }]
     };
 
@@ -21,8 +22,11 @@ public sealed class NpcRetirementTests
         var restored = MessagePackSerializer.Deserialize<NpcRetirementRequestV1>(bytes);
         Assert.Equal(request.RequestId, restored.RequestId);
         Assert.Equal(request.Npcs, restored.Npcs);
-        var response = new NpcRetirementResponseV1 { RequestId = request.RequestId,
-            Npcs = [new() { NpcId = request.Npcs[0].NpcId, Accepted = true, OwnershipVersion = 8, ReasonCode = "retired" }] };
+        var response = new NpcRetirementResponseV1
+        {
+            RequestId = request.RequestId,
+            Npcs = [new() { NpcId = request.Npcs[0].NpcId, Accepted = true, OwnershipVersion = 8, ReasonCode = "retired" }]
+        };
         Assert.Equal(response.Npcs, MessagePackSerializer.Deserialize<NpcRetirementResponseV1>(
             MessagePackSerializer.Serialize(response)).Npcs);
     }

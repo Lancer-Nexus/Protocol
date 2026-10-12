@@ -31,16 +31,24 @@ public sealed class MarketContractsTests
     {
         var request = new MarketGoodReadRequestV1
         {
-            CorrelationId = Guid.NewGuid(), SystemId = "li01", MarketId = "li01_01_base",
-            GoodId = "commodity_food", ExpectedSystemRevision = 12, ExpectedMarketRevision = 8
+            CorrelationId = Guid.NewGuid(),
+            SystemId = "li01",
+            MarketId = "li01_01_base",
+            GoodId = "commodity_food",
+            ExpectedSystemRevision = 12,
+            ExpectedMarketRevision = 8
         };
         var good = Good(request.MarketId, request.GoodId) with { MarketRevision = 8 };
         var response = new MarketGoodReadResponseV1
         {
-            CorrelationId = request.CorrelationId, SystemId = request.SystemId,
-            MarketId = request.MarketId, GoodId = request.GoodId,
-            Status = MarketGoodReadStatusV1.Found, SystemRevision = 12,
-            MarketRevision = 8, Good = good
+            CorrelationId = request.CorrelationId,
+            SystemId = request.SystemId,
+            MarketId = request.MarketId,
+            GoodId = request.GoodId,
+            Status = MarketGoodReadStatusV1.Found,
+            SystemRevision = 12,
+            MarketRevision = 8,
+            Good = good
         };
 
         Assert.True(request.IsValid());
@@ -58,14 +66,20 @@ public sealed class MarketContractsTests
     {
         var request = new MarketGoodReadRequestV1
         {
-            CorrelationId = Guid.NewGuid(), SystemId = "li01", MarketId = "li01_01_base",
-            GoodId = "commodity_food", ExpectedSystemRevision = 12
+            CorrelationId = Guid.NewGuid(),
+            SystemId = "li01",
+            MarketId = "li01_01_base",
+            GoodId = "commodity_food",
+            ExpectedSystemRevision = 12
         };
         var mismatch = new MarketGoodReadResponseV1
         {
-            CorrelationId = request.CorrelationId, SystemId = request.SystemId,
-            MarketId = request.MarketId, GoodId = request.GoodId,
-            Status = MarketGoodReadStatusV1.RevisionMismatch, SystemRevision = 13
+            CorrelationId = request.CorrelationId,
+            SystemId = request.SystemId,
+            MarketId = request.MarketId,
+            GoodId = request.GoodId,
+            Status = MarketGoodReadStatusV1.RevisionMismatch,
+            SystemRevision = 13
         };
         var missing = mismatch with { Status = MarketGoodReadStatusV1.NotFound, SystemRevision = 12 };
 

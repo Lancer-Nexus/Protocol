@@ -14,7 +14,9 @@ public sealed class CharacterRosterContractsTests
     {
         var request = new CharacterRosterRequestV1
         {
-            CorrelationId = Guid.NewGuid(), AccountId = Guid.NewGuid(), SessionId = Guid.NewGuid()
+            CorrelationId = Guid.NewGuid(),
+            AccountId = Guid.NewGuid(),
+            SessionId = Guid.NewGuid()
         };
         var result = new CharacterRosterResultV1
         {
@@ -45,11 +47,16 @@ public sealed class CharacterRosterContractsTests
     {
         var request = new CharacterDeletionRequestV1
         {
-            CorrelationId = Guid.NewGuid(), AccountId = Guid.NewGuid(), SessionId = Guid.NewGuid(), CharacterId = 12
+            CorrelationId = Guid.NewGuid(),
+            AccountId = Guid.NewGuid(),
+            SessionId = Guid.NewGuid(),
+            CharacterId = 12
         };
         var result = new CharacterDeletionResultV1
         {
-            CorrelationId = request.CorrelationId, Accepted = true, ReasonCode = "deleted"
+            CorrelationId = request.CorrelationId,
+            Accepted = true,
+            ReasonCode = "deleted"
         };
 
         Assert.True(request.IsValid());
@@ -68,16 +75,23 @@ public sealed class CharacterRosterContractsTests
     {
         var bootstrap = new CharacterBootstrapRequestV1
         {
-            CorrelationId = Guid.NewGuid(), AccountId = Guid.NewGuid(), SessionId = Guid.NewGuid(),
-            CharacterId = 73, Payload = [1, 2, 3]
+            CorrelationId = Guid.NewGuid(),
+            AccountId = Guid.NewGuid(),
+            SessionId = Guid.NewGuid(),
+            CharacterId = 73,
+            Payload = [1, 2, 3]
         };
         var result = new CharacterBootstrapResultV1
         {
-            CorrelationId = bootstrap.CorrelationId, Accepted = true, ReasonCode = "stored"
+            CorrelationId = bootstrap.CorrelationId,
+            Accepted = true,
+            ReasonCode = "stored"
         };
         var preview = new CharacterSnapshotPreviewRequestV1
         {
-            CorrelationId = Guid.NewGuid(), AccountId = bootstrap.AccountId, SessionId = bootstrap.SessionId,
+            CorrelationId = Guid.NewGuid(),
+            AccountId = bootstrap.AccountId,
+            SessionId = bootstrap.SessionId,
             CharacterId = bootstrap.CharacterId
         };
 

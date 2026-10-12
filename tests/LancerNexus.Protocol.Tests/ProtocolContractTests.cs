@@ -10,8 +10,16 @@ public sealed class ProtocolContractTests
     [Fact]
     public void MultiSystemHeartbeatPreservesLegacyTenFieldDecoding()
     {
-        var value = new InstanceHeartbeat { AgentId = "agent", InstanceId = "li-01", SystemId = "li01",
-            SystemIds = ["li01", "li03"], Sequence = 1, MaxPlayers = 200, Endpoint = "127.0.0.1:26005" };
+        var value = new InstanceHeartbeat
+        {
+            AgentId = "agent",
+            InstanceId = "li-01",
+            SystemId = "li01",
+            SystemIds = ["li01", "li03"],
+            Sequence = 1,
+            MaxPlayers = 200,
+            Endpoint = "127.0.0.1:26005"
+        };
         var bytes = MessagePackSerializer.Serialize(value);
         var copy = MessagePackSerializer.Deserialize<InstanceHeartbeat>(bytes);
         Assert.Equal(value.SystemIds, copy.SystemIds);
@@ -43,13 +51,19 @@ public sealed class ProtocolContractTests
         var legacy = MessagePackSerializer.Deserialize<InstanceHeartbeat>(buffer.WrittenMemory);
         Assert.Equal("li03", legacy.SystemId);
         Assert.Null(legacy.NpcTransferEndpoint);
-        var prepared = new NpcTransferPrepared { TargetEndpoint = "udp://127.0.0.3:25444",
-            NpcTransferEndpoint = value.NpcTransferEndpoint };
+        var prepared = new NpcTransferPrepared
+        {
+            TargetEndpoint = "udp://127.0.0.3:25444",
+            NpcTransferEndpoint = value.NpcTransferEndpoint
+        };
         var restored = MessagePackSerializer.Deserialize<NpcTransferPrepared>(MessagePackSerializer.Serialize(prepared));
         Assert.Equal(prepared.TargetEndpoint, restored.TargetEndpoint);
         Assert.Equal(prepared.NpcTransferEndpoint, restored.NpcTransferEndpoint);
-        var target = new NpcTransferTargetResolveResultV1 { TargetEndpoint = prepared.TargetEndpoint,
-            NpcTransferEndpoint = prepared.NpcTransferEndpoint };
+        var target = new NpcTransferTargetResolveResultV1
+        {
+            TargetEndpoint = prepared.TargetEndpoint,
+            NpcTransferEndpoint = prepared.NpcTransferEndpoint
+        };
         Assert.Equal(target.NpcTransferEndpoint, MessagePackSerializer.Deserialize<NpcTransferTargetResolveResultV1>(
             MessagePackSerializer.Serialize(target)).NpcTransferEndpoint);
     }

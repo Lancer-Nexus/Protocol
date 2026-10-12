@@ -45,8 +45,11 @@ public sealed class FlHookEventContractsTests
     {
         var valid = new FlHookEventIngestResultV1
         {
-            CorrelationId = Guid.NewGuid(), InstanceId = "li-01", ProducerEpoch = Guid.NewGuid(),
-            Sequence = 1, Status = FlHookEventIngestStatusV1.Stored
+            CorrelationId = Guid.NewGuid(),
+            InstanceId = "li-01",
+            ProducerEpoch = Guid.NewGuid(),
+            Sequence = 1,
+            Status = FlHookEventIngestStatusV1.Stored
         };
 
         Assert.False((valid with { ProducerEpoch = Guid.Empty }).IsValid());

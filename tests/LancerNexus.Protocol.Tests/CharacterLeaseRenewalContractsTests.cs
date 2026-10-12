@@ -16,12 +16,18 @@ public sealed class CharacterLeaseRenewalContractsTests
         var token = Convert.ToBase64String(bytes).TrimEnd('=').Replace('+', '-').Replace('/', '_');
         var request = new CharacterLeaseRenewRequestV1
         {
-            CorrelationId = Guid.NewGuid(), CharacterId = 99, LeaseToken = token, LeaseVersion = 4
+            CorrelationId = Guid.NewGuid(),
+            CharacterId = 99,
+            LeaseToken = token,
+            LeaseVersion = 4
         };
         var result = new CharacterLeaseRenewResultV1
         {
-            CorrelationId = request.CorrelationId, Accepted = true, ReasonCode = "renewed",
-            LeaseVersion = 4, ValidUntilUtc = DateTimeOffset.UtcNow.AddMinutes(15)
+            CorrelationId = request.CorrelationId,
+            Accepted = true,
+            ReasonCode = "renewed",
+            LeaseVersion = 4,
+            ValidUntilUtc = DateTimeOffset.UtcNow.AddMinutes(15)
         };
 
         Assert.True(request.IsValid());

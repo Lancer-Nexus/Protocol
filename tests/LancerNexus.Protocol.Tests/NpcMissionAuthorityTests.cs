@@ -12,13 +12,21 @@ public sealed class NpcMissionAuthorityTests
     {
         var request = new NpcMissionAuthorityRequestV1
         {
-            TransferId = Guid.NewGuid(), SourceInstanceId = "source", TargetInstanceId = "target",
-            TargetSystemId = "li02", Decision = state
+            TransferId = Guid.NewGuid(),
+            SourceInstanceId = "source",
+            TargetInstanceId = "target",
+            TargetSystemId = "li02",
+            Decision = state
         };
         var reply = new NpcMissionAuthorityResultV1
         {
-            TransferId = request.TransferId, SourceInstanceId = "source", TargetInstanceId = "target",
-            TargetSystemId = "LI02", Decision = state, Accepted = true, CommittedLeaseVersion = version
+            TransferId = request.TransferId,
+            SourceInstanceId = "source",
+            TargetInstanceId = "target",
+            TargetSystemId = "LI02",
+            Decision = state,
+            Accepted = true,
+            CommittedLeaseVersion = version
         };
         var bytes = MessagePackSerializer.Serialize(request);
         Assert.Equal(6, new MessagePackReader(bytes).ReadArrayHeader());

@@ -14,12 +14,17 @@ public sealed class CharacterIdentityContractsTests
     {
         var request = new CharacterIdentityResolveRequestV1
         {
-            CorrelationId = Guid.NewGuid(), AccountId = Guid.NewGuid(), SessionId = Guid.NewGuid(),
+            CorrelationId = Guid.NewGuid(),
+            AccountId = Guid.NewGuid(),
+            SessionId = Guid.NewGuid(),
             DisplayName = "Pilot One"
         };
         var result = new CharacterIdentityResolveResultV1
         {
-            CorrelationId = request.CorrelationId, Accepted = true, ReasonCode = "resolved", CharacterId = 918,
+            CorrelationId = request.CorrelationId,
+            Accepted = true,
+            ReasonCode = "resolved",
+            CharacterId = 918,
             LeaseTicket = "signed-ticket"
         };
 

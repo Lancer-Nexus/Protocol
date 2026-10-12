@@ -84,14 +84,19 @@ public sealed class CharacterLeaseContractsTests
     {
         var accepted = new CharacterLeaseReleaseResultV1
         {
-            CorrelationId = Guid.NewGuid(), Released = true, ReasonCode = "released", LeaseVersion = 4
+            CorrelationId = Guid.NewGuid(),
+            Released = true,
+            ReasonCode = "released",
+            LeaseVersion = 4
         };
 
         Assert.True(accepted.IsValid());
         Assert.False((accepted with { LeaseVersion = null }).IsValid());
         Assert.True(new CharacterLeaseReleaseResultV1
         {
-            CorrelationId = Guid.NewGuid(), Released = false, ReasonCode = "lease_mismatch"
+            CorrelationId = Guid.NewGuid(),
+            Released = false,
+            ReasonCode = "lease_mismatch"
         }.IsValid());
     }
 
