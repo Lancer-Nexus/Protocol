@@ -80,6 +80,36 @@ public sealed class PlacementRequest
     [Key(6)] public string ClientBuild { get; init; } = "";
     [Key(7)] public string Region { get; init; } = "";
     [Key(8)] public string IdempotencyKey { get; init; } = "";
+
+    public bool IsValid() => PlacementRequestValidator.IsValid(this);
+}
+
+public static class PlacementRequestValidator
+{
+    public const int MaximumSystemIdLength = 128;
+    public const int MaximumGroupIdLength = 128;
+    public const int MaximumEventIdLength = 128;
+    public const int MaximumClientBuildLength = 128;
+    public const int MaximumRegionLength = 64;
+    public const int MaximumIdempotencyKeyLength = 128;
+
+    public static bool IsValid(PlacementRequest? request) =>
+        request is not null &&
+        request.RequestId != Guid.Empty &&
+        request.SessionId != Guid.Empty &&
+        request.CharacterId is null or > 0 &&
+        IsRequiredText(request.TargetSystem, MaximumSystemIdLength) &&
+        IsOptionalText(request.GroupId, MaximumGroupIdLength) &&
+        IsOptionalText(request.EventId, MaximumEventIdLength) &&
+        IsOptionalText(request.ClientBuild, MaximumClientBuildLength) &&
+        IsOptionalText(request.Region, MaximumRegionLength) &&
+        IsRequiredText(request.IdempotencyKey, MaximumIdempotencyKeyLength);
+
+    private static bool IsRequiredText(string? value, int maximumLength) =>
+        !string.IsNullOrWhiteSpace(value) && value.Length <= maximumLength;
+
+    private static bool IsOptionalText(string? value, int maximumLength) =>
+        value is null || value.Length <= maximumLength;
 }
 
 [MessagePackObject]
